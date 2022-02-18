@@ -1,21 +1,33 @@
+import sys
+import os
+
+data_lib = os.path.abspath('../data_preprocessing')
+signal_processing_lib = os.path.abspath('../signal_processing')
+if data_lib not in sys.path:
+    sys.path.append(data_lib)
+if signal_processing_lib not in sys.path:
+    sys.path.append(signal_processing_lib)
+
 import argparse
 from tqdm import tqdm
 from typing import List
-from ..signal_processing.bvp_signal_processing import *
-from ..signal_processing.eda_signal_processing import *
-from ..signal_processing.temp_signal_processing import *
-from ..data_preprocessing.dataloader import DataLoader
-from ..data_preprocessing.datapath_manager import *
+from bvp_signal_processing import *
+from eda_signal_processing import *
+from temp_signal_processing import *
+from dataloader import DataLoader
+from datapath_manager import *
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("dataset_name", type=str, required=True)
-parser.add_argument("--signal", type=str, required=True)
-parser.add_argument("--window_shift", type=float, required=False, default=0.25)
-parser.add_argument("--window_size", type=float, required=False, default=60)
-parser.add_argument("--user_id", type=str, required=False, default=None)
+parser.add_argument("dataset_name", type=str)
+parser.add_argument("signal", type=str)
+parser.add_argument("--window_shift", type=float, default=0.25)
+parser.add_argument("--window_size", type=float, default=60)
+parser.add_argument("--user_id", type=str, default=None)
 
 args = parser.parse_args()
 
@@ -65,16 +77,16 @@ if __name__ == '__main__':
         stats_features = []
         sampling_rate = get_sampling_rate(args.signal)
         ds_data = dataloader.load_dataset_data()
-        for user_id, data in ds_data[args.signal].items():
+        for user_id, data in tqdm(ds_data[args.signal].items()):
             print("Processing ---- {} ----".format(user_id))
             for task_id, signal_data in data.items():
                 len_signal = len(signal_data)
                 step = int(args.window_shift * sampling_rate) # The true step to slide along the time axis of the signal
                 first_iter = int(args.window_size * sampling_rate)
                 # The true index of the signal at a time-point
-                for current_iter in tqdm(range(first_iter, len_signal)): # current_iter is "second_iter"
+                for current_iter in tqdm(range(first_iter, len_signal, step)): # current_iter is "second_iter"
                     previous_iter = current_iter - first_iter
-                    signal = signal_data[previous_iter:current_iter]
+                    signal = np.array(signal_data[previous_iter:current_iter])
                     # Clean signal depends on the signal type
                     signal = clean_signal(signal, args.signal)
                     # Extract statistical features from cleaned signal
@@ -83,6 +95,7 @@ if __name__ == '__main__':
             print('----------------------------------------')
 
         stats_features = np.array(stats_features)
+        create_folder(ds_path_manager.stats_feature_path)
         output_file_path = os.path.join(ds_path_manager.stats_feature_path, f'{args.signal}.npy')
         np.save(output_file_path, stats_features)
     else:

@@ -1,5 +1,5 @@
 from datapath_manager import *
-import json
+import pickle
 
 
 class DataLoader:
@@ -21,7 +21,7 @@ class DataLoader:
         }
         """
         user_data_paths = self.dp_manager.user_data_paths[user_id]
-        user_data = json.load(open(user_data_paths.processed_data_path, 'r'))
+        user_data = pickle.load(open(user_data_paths.processed_data_path, 'rb'))
         return user_data
 
 
@@ -43,5 +43,5 @@ class DataLoader:
         }
         """
         ds_data_path = self.dp_manager.processed_dataset_path
-        ds_data = json.load(open(ds_data_path, 'r'))
+        ds_data = pickle.load(open(ds_data_path, 'rb'))
         return ds_data

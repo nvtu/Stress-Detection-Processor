@@ -6,7 +6,6 @@ import json
 import os
 
 
-
 @dataclass
 class UserDataPath:
 
@@ -28,6 +27,11 @@ class DatasetPath:
     user_data_paths: Dict[str, UserDataPath]
 
 
+def create_folder(folder_path: str):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+
 def get_datapath_manager(dataset_name: str):
     config_file_path = str(Path(__file__).parent.parent / 'config.ini')
     config = configparser.ConfigParser()
@@ -36,16 +40,17 @@ def get_datapath_manager(dataset_name: str):
     dataset_path = config['DATA_PATH'][dataset_name]
     metadata_path = os.path.join(dataset_path, 'metadata.csv')
     user_data_paths = {}
-    list_users = sorted([user_id for user_id in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, user_id))])
+    data_path = os.path.join(dataset_path, 'data')
+    list_users = sorted([user_id for user_id in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, user_id))])
     for user_id in list_users:
         user_data_path = UserDataPath(
-            user_data_path=os.path.join(dataset_path, user_id),
-            acc_path=os.path.join(dataset_path, user_id, 'ACC.csv'),
-            bvp_path=os.path.join(dataset_path, user_id, 'BVP.csv'),
-            eda_path=os.path.join(dataset_path, user_id, 'EDA.csv'),
-            temp_path=os.path.join(dataset_path, user_id, 'TEMP.csv'),
-            processed_data_path=os.path.join(dataset_path, user_id, f'{dataset_name}_{user_id}.pkl'),
-            feature_path=os.path.join(dataset_path, user_id, 'features')
+            user_data_path=os.path.join(data_path, user_id),
+            acc_path=os.path.join(data_path, user_id, 'ACC.csv'),
+            bvp_path=os.path.join(data_path, user_id, 'BVP.csv'),
+            eda_path=os.path.join(data_path, user_id, 'EDA.csv'),
+            temp_path=os.path.join(data_path, user_id, 'TEMP.csv'),
+            processed_data_path=os.path.join(data_path, user_id, f'{dataset_name}_{user_id}.pkl'),
+            feature_path=os.path.join(data_path, user_id, 'features')
         )
         user_data_paths[user_id] = user_data_path
 
