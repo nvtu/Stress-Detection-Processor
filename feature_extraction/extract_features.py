@@ -1,6 +1,7 @@
 import sys
 import os
 
+
 data_lib = os.path.abspath('../data_preprocessing')
 signal_processing_lib = os.path.abspath('../signal_processing')
 if data_lib not in sys.path:
@@ -66,38 +67,56 @@ def extract_statistical_feature(signal, signal_type: str):
     elif signal_type == 'temp':
         temp_processor = TEMP_Signal_Processor()
         features = temp_processor.temp_feature_extraction(signal)
-        return features
+    return features
+
+
+def extract_features_for_users(ds_path_manager, data, user_id: str):
+    sampling_rate = get_sampling_rate(args.signal)
+    feature_path = get_feature_path(ds_path_manager, user_id, args.signal)
+    features = []
+    if not os.path.exists(feature_path):
+        for task_id, signal_data in data.items():
+            len_signal = len(signal_data)
+            step = int(args.window_shift * sampling_rate) # The true step to slide along the time axis of the signal
+            first_iter = int(args.window_size * sampling_rate)
+            # The true index of the signal at a time-point
+            for current_iter in tqdm(range(first_iter, len_signal, step)): # current_iter is "second_iter"
+                previous_iter = current_iter - first_iter
+                signal = np.array(signal_data[previous_iter:current_iter])
+                # Clean signal depends on the signal type
+                signal = clean_signal(signal, args.signal)
+                # Extract statistical features from cleaned signal
+                stats_feature = extract_statistical_feature(signal, args.signal)  
+                features.append(stats_feature)
+        np.save(feature_path, np.array(features)) 
+    else:
+        features = np.load(feature_path).tolist()
+    return features
+
+
+
+def extract_features_for_dataset(ds_path_manager, ds_data):
+    stats_features = []
+    sampling_rate = get_sampling_rate(args.signal)
+    for user_id, data in ds_data[args.signal].items():
+        print("Processing ---- {} ----".format(user_id))
+        features = extract_features_for_users(ds_path_manager, data, str(user_id))
+        stats_features += features
+        print('----------------------------------------')
+
+    stats_features = np.array(stats_features)
+    create_folder(ds_path_manager.stats_feature_path)
+    output_file_path = os.path.join(ds_path_manager.stats_feature_path, f'{args.signal}.npy')
+    np.save(output_file_path, stats_features)
 
 
 if __name__ == '__main__':
     dataloader = DataLoader(args.dataset_name)
+    ds_data = dataloader.load_dataset_data(gen_user_data_structure = True)
     ds_path_manager = get_datapath_manager(args.dataset_name)
     if args.user_id is None:
         # Process statistics for all users in the dataset
-        stats_features = []
-        sampling_rate = get_sampling_rate(args.signal)
-        ds_data = dataloader.load_dataset_data()
-        for user_id, data in tqdm(ds_data[args.signal].items()):
-            print("Processing ---- {} ----".format(user_id))
-            for task_id, signal_data in data.items():
-                len_signal = len(signal_data)
-                step = int(args.window_shift * sampling_rate) # The true step to slide along the time axis of the signal
-                first_iter = int(args.window_size * sampling_rate)
-                # The true index of the signal at a time-point
-                for current_iter in tqdm(range(first_iter, len_signal, step)): # current_iter is "second_iter"
-                    previous_iter = current_iter - first_iter
-                    signal = np.array(signal_data[previous_iter:current_iter])
-                    # Clean signal depends on the signal type
-                    signal = clean_signal(signal, args.signal)
-                    # Extract statistical features from cleaned signal
-                    stats_feature = extract_statistical_feature(signal, args.signal)  
-                    stats_features.append(stats_feature)
-            print('----------------------------------------')
-
-        stats_features = np.array(stats_features)
-        create_folder(ds_path_manager.stats_feature_path)
-        output_file_path = os.path.join(ds_path_manager.stats_feature_path, f'{args.signal}.npy')
-        np.save(output_file_path, stats_features)
+        extract_features_for_dataset(ds_path_manager, ds_data)
     else:
         # Process statistical feature extraction for a single user
-        pass 
+        _ = extract_features_for_dataset(ds_path_manager, ds_data[args.signal][args.user_id], args.user_id)

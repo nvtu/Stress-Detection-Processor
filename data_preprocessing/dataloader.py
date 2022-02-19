@@ -5,6 +5,7 @@ import pickle
 class DataLoader:
 
     def __init__(self, dataset_name: str):
+        self.dataset_name = dataset_name
         self.dp_manager = get_datapath_manager(dataset_name)
     
 
@@ -25,7 +26,7 @@ class DataLoader:
         return user_data
 
 
-    def load_dataset_data(self):
+    def load_dataset_data(self, gen_user_data_structure: bool = False):
         """
         Dataset Structure:
         {
@@ -44,4 +45,11 @@ class DataLoader:
         """
         ds_data_path = self.dp_manager.processed_dataset_path
         ds_data = pickle.load(open(ds_data_path, 'rb'))
+        if generate_user_data_structure:
+            user_ids = ds_data['eda'].keys()
+            generate_user_data_structure(self.dataset_name, user_ids)
         return ds_data
+
+    
+
+        

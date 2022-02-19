@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import json
 import os
+from typing import List
 
 
 @dataclass
@@ -16,6 +17,10 @@ class UserDataPath:
     temp_path: str
     processed_data_path: str
     feature_path: str # Output feature path
+    acc_feature_path: str
+    bvp_feature_path: str
+    eda_feature_path: str
+    temp_feature_path: str
 
 
 @dataclass
@@ -30,6 +35,30 @@ class DatasetPath:
 def create_folder(folder_path: str):
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
+    
+
+def get_feature_path(ds_path_manager: DatasetPath, user_id: str, signal_type: str):
+    if signal_type == 'acc':
+        return ds_path_manager.user_data_paths[user_id].acc_feature_path
+    elif signal_type == 'bvp':
+        return ds_path_manager.user_data_paths[user_id].bvp_feature_path
+    elif signal_type == 'eda':
+        return ds_path_manager.user_data_paths[user_id].eda_feature_path
+    elif signal_type == 'temp':
+        return ds_path_manager.user_data_paths[user_id].temp_feature_path
+    else:
+        raise ValueError(f'Signal type {signal_type} is not supported')
+    
+
+def generate_user_data_structure(dataset_name: str, user_ids: List[str]):
+    dp_manager = get_datapath_manager(dataset_name)
+    data_path = os.path.join(dp_manager.dataset_path, 'data')
+    create_folder(data_path)
+    for user_id in user_ids:
+        user_folder_path = os.path.join(data_path, str(user_id))
+        create_folder(user_folder_path)
+        feature_folder_path = os.path.join(user_folder_path, 'features')
+        create_folder(feature_folder_path)
 
 
 def get_datapath_manager(dataset_name: str):
@@ -43,6 +72,8 @@ def get_datapath_manager(dataset_name: str):
     data_path = os.path.join(dataset_path, 'data')
     list_users = sorted([user_id for user_id in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, user_id))])
     for user_id in list_users:
+        stats_feature_folder = os.path.join(data_path, user_id, 'features')
+        create_folder(stats_feature_folder)
         user_data_path = UserDataPath(
             user_data_path=os.path.join(data_path, user_id),
             acc_path=os.path.join(data_path, user_id, 'ACC.csv'),
@@ -50,7 +81,11 @@ def get_datapath_manager(dataset_name: str):
             eda_path=os.path.join(data_path, user_id, 'EDA.csv'),
             temp_path=os.path.join(data_path, user_id, 'TEMP.csv'),
             processed_data_path=os.path.join(data_path, user_id, f'{dataset_name}_{user_id}.pkl'),
-            feature_path=os.path.join(data_path, user_id, 'features')
+            feature_path=stats_feature_folder,
+            acc_feature_path=os.path.join(stats_feature_folder, 'acc.npy'),
+            bvp_feature_path=os.path.join(stats_feature_folder, 'bvp.npy'),
+            eda_feature_path=os.path.join(stats_feature_folder, 'eda.npy'),
+            temp_feature_path=os.path.join(stats_feature_folder, 'temp.npy')
         )
         user_data_paths[user_id] = user_data_path
 
