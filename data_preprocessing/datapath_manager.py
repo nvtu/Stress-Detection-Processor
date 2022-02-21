@@ -21,6 +21,8 @@ class UserDataPath:
     bvp_feature_path: str
     eda_feature_path: str
     temp_feature_path: str
+    ground_truth_path: str
+    group_path: str
 
 
 @dataclass
@@ -28,6 +30,9 @@ class DatasetPath:
     dataset_path: str
     metadata_path: str
     processed_dataset_path: str
+    combined_feature_path: str
+    combined_ground_truth_path: str
+    combined_groups_path: str
     stats_feature_path: str
     user_data_paths: Dict[str, UserDataPath]
 
@@ -85,7 +90,9 @@ def get_datapath_manager(dataset_name: str):
             acc_feature_path=os.path.join(stats_feature_folder, 'acc.npy'),
             bvp_feature_path=os.path.join(stats_feature_folder, 'bvp.npy'),
             eda_feature_path=os.path.join(stats_feature_folder, 'eda.npy'),
-            temp_feature_path=os.path.join(stats_feature_folder, 'temp.npy')
+            temp_feature_path=os.path.join(stats_feature_folder, 'temp.npy'),
+            ground_truth_path=os.path.join(stats_feature_folder, 'ground_truth.npy'),
+            group_path=os.path.join(stats_feature_folder, 'group.npy'),
         )
         user_data_paths[user_id] = user_data_path
 
@@ -93,6 +100,9 @@ def get_datapath_manager(dataset_name: str):
         dataset_path=dataset_path,
         metadata_path=metadata_path,
         processed_dataset_path=os.path.join(dataset_path, f'{dataset_name}.pkl'),
+        combined_feature_path=os.path.join(dataset_path, f'{dataset_name}_combined_features.npy'),
+        combined_ground_truth_path = os.path.join(dataset_path, f'{dataset_name}_combined_ground_truth.npy'),
+        combined_groups_path=os.path.join(dataset_path, f'{dataset_name}_combined_groups.npy'),
         stats_feature_path=os.path.join(dataset_path, f'stats_features'),
         user_data_paths=user_data_paths
     )

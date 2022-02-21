@@ -1,5 +1,6 @@
-from datapath_manager import *
+from .datapath_manager import *
 import pickle
+import numpy as np
 
 
 class DataLoader:
@@ -13,12 +14,13 @@ class DataLoader:
         """
         User Data Structure:
         {
-            'task_id': {
-                'eda': [eda_data],
-                'bvp': [bvp_data],
-                'temp': [temp_data],
-                'ground_truth': ground_truth_data
-            }
+            'eda': {
+                'task_id': [eda_data],
+            },
+            'ground_truth': {
+                'task_id': [ground_truth_data],
+            },
+            ...
         }
         """
         user_data_paths = self.dp_manager.user_data_paths[user_id]
@@ -50,6 +52,15 @@ class DataLoader:
             generate_user_data_structure(self.dataset_name, user_ids)
         return ds_data
 
+    
+    def load_data_for_training(self):
+        """
+        Load dataset for training including combined features 
+        """
+        dataset = np.load(self.dp_manager.combined_feature_path)
+        ground_truth = np.load(self.dp_manager.combined_ground_truth_path)
+        groups = np.load(self.dp_manager.combined_groups_path)
+        return dataset, ground_truth, groups
     
 
         

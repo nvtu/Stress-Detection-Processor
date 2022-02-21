@@ -2,7 +2,7 @@ from collections import defaultdict
 from curses import meta
 from signal import signal
 from time import time
-from datapath_manager import *
+from .datapath_manager import *
 from tqdm import tqdm
 import pandas as pd
 import argparse
@@ -86,9 +86,7 @@ def preprocess_user_data(dataset_name: str, user_id: str, dp_manager: DatasetPat
     
     The structure of the output is:
         eda: {
-            user_id: {
-                task_id: [eda_data]
-            }
+            task_id: [eda_data]
         },
         ...
     """
@@ -118,7 +116,7 @@ def preprocess_user_data(dataset_name: str, user_id: str, dp_manager: DatasetPat
         temp_first_pt, temp_last_pt = get_signal_ptr_index(temp_start_time, TEMP_SAMPLING_RATE, (start_time_in_seconds, end_time_in_seconds))
         temp[session_id] = _temp[temp_first_pt:temp_last_pt]
 
-        ground_truth[session_id] = label
+        ground_truth[session_id] = label # Support only one-label ground-truth
 
     user_data = {
         'eda': eda,

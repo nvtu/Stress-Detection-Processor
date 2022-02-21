@@ -70,7 +70,7 @@ def extract_statistical_feature(signal, signal_type: str):
     return features
 
 
-def extract_features_for_users(ds_path_manager, data, user_id: str):
+def extract_features_for_user(ds_path_manager, data, user_id: str):
     sampling_rate = get_sampling_rate(args.signal)
     feature_path = get_feature_path(ds_path_manager, user_id, args.signal)
     features = []
@@ -100,7 +100,7 @@ def extract_features_for_dataset(ds_path_manager, ds_data):
     sampling_rate = get_sampling_rate(args.signal)
     for user_id, data in ds_data[args.signal].items():
         print("Processing ---- {} ----".format(user_id))
-        features = extract_features_for_users(ds_path_manager, data, str(user_id))
+        features = extract_features_for_user(ds_path_manager, data, str(user_id))
         stats_features += features
         print('----------------------------------------')
 
@@ -119,4 +119,4 @@ if __name__ == '__main__':
         extract_features_for_dataset(ds_path_manager, ds_data)
     else:
         # Process statistical feature extraction for a single user
-        _ = extract_features_for_dataset(ds_path_manager, ds_data[args.signal][args.user_id], args.user_id)
+        _ = extract_features_for_user(ds_path_manager, ds_data[args.signal][args.user_id], args.user_id)
