@@ -1,6 +1,14 @@
+import sys
+import os
+
+data_lib = os.path.abspath('./data_processing')
+if data_lib not in sys.path:
+    sys.path.append(data_lib)
+
 from models.ML_Classifiers import BinaryClassifier
-from data_preprocessing.dataloader import *
-from data_preprocessing.datapath_manager import *
+from data_processing.dataloader import *
+from data_processing.datapath_manager import *
+from data_processing.result_utils import *
 import argparse
 
 
@@ -20,7 +28,13 @@ if __name__ == '__main__':
     dataset, ground_truth, groups = dataloader.load_data_for_training()
     # ds_path_manager = get_datapath_manager(args.dataset_name)
 
-    clf = BinaryClassifier(dataset, ground_truth, args.model_name, basic_logo_validation = True, groups = groups)
+    clf = BinaryClassifier(dataset, ground_truth, 
+        args.model_name, 
+        subject_independent = True if args.detector_type == 'General' else False, 
+        subject_dependent = True if args.detector_type == 'Personal' else False, 
+        groups = groups)
     results = clf.exec_classifier()
+    result_helper = ResultUtils(args.dataset_name)
+    result_helper.dump_result_to_csv(results, columns=['user_id', 'accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1_score'])
     print('----------------------------------')   
 

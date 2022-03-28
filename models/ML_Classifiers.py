@@ -17,16 +17,18 @@ from tqdm import tqdm
 class BinaryClassifier:
 
     def __init__(self, X: np.array, y: np.array, strategy: str, groups: np.array = None,
-                    random_state: int = 0, cross_validation: bool = False, logo_validation: bool = False, basic_logo_validation: bool = False, scoring = 'accuracy'):
+                    random_state: int = 0, 
+                    subject_dependent: bool = False, 
+                    subject_independent: bool = False,
+                    hybrid_evaluation: bool = False):
         self.X = X
         self.y = y
         self.strategy = strategy # Stress detection strategy - possible options: mlp, knn, svm, logistic_regression, random_forest
         self.groups = groups
         self.random_state = random_state
-        self.cross_validation = cross_validation # Cross-validation approach
-        self.logo_validation = logo_validation # Leave one group out approach
-        self.basic_logo_validation = basic_logo_validation
-        self.scoring = scoring
+        self.subject_dependent = subject_dependent # Subject-dependent model evaluation based on cross-validation approach
+        self.subject_independent = subject_independent # Subject-independent model evaluation based on Leave one group out approach
+        self.hybrid_evaluation = hybrid_evaluation
     
 
     def __get_hyper_parameters(self, method): # Deprecated
@@ -91,79 +93,66 @@ class BinaryClassifier:
             scaled_X_train = std_scaler.transform(X_train)
             scaled_X_test = std_scaler.transform(X_test)
         return scaled_X_train, scaled_X_test
-    
-
-    def split_train_test_cv(self, test_size = 0.2):
-        X_train = np.array([])
-        X_test = np.array([])
-        y_train = np.array([])
-        y_test = np.array([])
-        num_items = len(self.y)
-        first_pointer = 0
-        train_size = 1 - test_size
-        for i in range(1, num_items):
-            if self.y[i] != self.y[i-1] or i == num_items - 1:
-                if i == num_items - 1: i += 1 
-                _y = self.y[first_pointer:i]
-                _X = self.X[first_pointer:i]
-                train_index = int(train_size * len(_y))
-                X_train = np.append(X_train, _X[:train_index])
-                y_train = np.append(y_train, _y[:train_index])
-                X_test = np.append(X_test, _X[train_index:])
-                y_test = np.append(y_test, _y[train_index:])
-                first_pointer = i
-        X_train = X_train.reshape(len(y_train), -1)
-        y_train = np.array(y_train)
-        X_test = X_test.reshape(len(y_test), -1)
-        y_test = np.array(y_test)
-        return X_train, X_test, y_train, y_test
 
 
-    def cross_validator(self, method: str):
-        # X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.286, stratify = self.y, random_state = self.random_state) # Split train test data
-        # X_train, X_test, y_train, y_test = self.split_train_test_cv(test_size = 0.286)
-        # Validate if the data has two classes
-        # num_classes = len(np.unique(self.y)
+    def subject_dependent_evaluate(self, method: str):
+        
+        def split_train_test(X, y, test_size = 0.2):
+            X_train = []
+            y_train = []
+            X_test = []
+            y_test = []
+            logo = LeaveOneGroupOut()
+            for _, split_index in logo.split(X, y=None, groups=y):
+                train_index = int(len(y[split_index]) * test_size)
+                X_train += X[split_index][:train_index].tolist()
+                y_train += y[split_index][:train_index].tolist()
+                X_test += X[split_index][train_index:].tolist()
+                y_test += y[split_index][train_index:].tolist()
+            return np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test)
+
         logo = LeaveOneGroupOut()
-        balanced_accs = []
-        test_groups = []
+        results = []
         for _, test_index in tqdm(logo.split(self.X, self.y, self.groups)):
             user_dataset, user_ground_truth = self.X[test_index], self.y[test_index]
-        
+            train_subject = self.groups[test_index][0]        
             # Validate if the test set and train set have enough classes
-            num_classes_test = len(np.unique(user_ground_truth))
-            if num_classes_test < 2:
+            if self.__validate_label_cnt(user_ground_truth) == False:
                 continue
+            
+            # Split the dataset into train and test
+            X_train, y_train, X_test, y_test = split_train_test(user_dataset, user_ground_truth)
+            # print(np.unique(y_train), np.unique(y_test))
+            _X_train, _X_test = self.__transform_data(method, X_train, X_test)
+            # Train
+            clf = self.__get_classifier(method)
+            clf.fit(_X_train, y_train)
+            # Infer on train and test set for evaluation
+            y_preds = clf.predict(_X_test)
+            y_preds_train = clf.predict(_X_train)
+            # Evaluate
+            train_scores = self.evaluate(y_train, y_preds_train)
+            train_acc, train_ba, train_prec, train_rec, train_f1 = train_scores
+            test_scores = self.evaluate(y_test, y_preds)
+            test_acc, test_ba, test_prec, test_rec, test_f1 = test_scores
 
-            skf = StratifiedKFold(n_splits=3)
-            test_scores = []
-            for _tr_index, _t_index in skf.split(user_dataset, user_ground_truth):
-                pipeline = []
-                if method in ['mlp', 'svm', 'knn', 'Voting3CLF']:
-                    pipeline.append(('sc', StandardScaler()))
-                estimator = self.__get_classifier(method)
-                pipeline.append(('estimator', estimator))
-                pipeline = Pipeline(pipeline)
-            # scores = cross_validate(pipeline, X=user_dataset, y=user_ground_truth, scoring=self.scoring, cv=skf)
-                pipeline.fit(user_dataset[_tr_index], user_ground_truth[_tr_index])
-                y_preds = pipeline.predict(user_dataset[_t_index])
-                bacc_score = self.evaluate(user_ground_truth[_t_index], y_preds)
-                test_scores.append(bacc_score)
-            print(f'{self.groups[test_index][0]} ---', test_scores, np.mean(test_scores))            
-            balanced_accs.append(np.mean(test_scores))
-            # balanced_accs.append(np.mean(scores['test_score']))
-            test_groups.append(self.groups[test_index][0])
-        results = { 'groups': test_groups, 'balanced_accuracy_score': balanced_accs }
+            # Append to the results
+            results.append([train_subject, *test_scores])
+
+            print(f'Test subject {train_subject} --- Train Score: {train_acc}, {train_ba}, {train_prec}, {train_rec}, {train_f1} --- Test Score: {test_acc}, {test_ba}, {test_prec}, {test_rec}, {test_f1}')
         return results
-       
+    
 
-    def basic_logo_validator(self, method: str) -> Dict[str, list]:
+    def subject_independent_evaluate(self, method: str) -> Dict[str, list]:
         logo = LeaveOneGroupOut()
-        test_groups = []
-        scores = []
+        results = []
 
         for train_index, test_index in tqdm(logo.split(self.X, self.y, self.groups)):
             X_train, y_train, X_test, y_test = self.X[train_index], self.y[train_index], self.X[test_index], self.y[test_index]
+            
+            if self.__validate_label_cnt(y_train) == False or self.__validate_label_cnt(y_test) == False:
+                continue
+
             clf = self.__get_classifier(method)
             _X_train, _X_test = self.__transform_data(method, X_train, X_test)
             # Train 
@@ -171,105 +160,38 @@ class BinaryClassifier:
             # Infer on test set
             y_preds = clf.predict(_X_test)
             y_preds_train = clf.predict(_X_train)
+            # Evaluate
             train_scores = self.evaluate(y_train, y_preds_train)
             train_acc, train_ba, train_prec, train_rec, train_f1 = train_scores
             test_scores = self.evaluate(y_test, y_preds)
             test_acc, test_ba, test_prec, test_rec, test_f1 = test_scores
 
             # Append to the results
-            scores.append(test_scores)
             test_subject = self.groups[test_index][0]
-            test_groups.append(test_subject)
+            results.append([test_subject, *test_scores])
 
             print(f'Test subject {test_subject} --- Train Score: {train_acc}, {train_ba}, {train_prec}, {train_rec}, {train_f1} --- Test Score: {test_acc}, {test_ba}, {test_prec}, {test_rec}, {test_f1}')
-        results = list(zip(test_groups, scores))
-        print(results)
         return results
 
 
-    def __validate_label_cnt(y):
+    def hybrid_evaluation(self, method: str) -> Dict[str, list]:
+        pass
+
+
+    def __validate_label_cnt(self, y):
         num_classes = len(np.unique(y))
         return num_classes > 1
 
 
-    def leave_one_group_out_validator(self, method: str) -> Dict[str, list]:
-        test_groups = []
-        balanced_accs = []
-        accs = []
-        cv_balanced_acc_scores = []
-
-
-        for train_index, test_index in tqdm(LeaveOneGroupOut().split(self.X, self.y, self.groups)):
-            X_train, y_train, X_test, y_test = self.X[train_index], self.y[train_index], self.X[test_index], self.y[test_index] # Get train and test data
-            train_groups = self.groups[train_index]
-
-            # Validate if the test set and train set have two classes
-            if self.__validate_label_cnt(y_train) == False or self.__validate_label_cnt(y_test) == False: # If one of them does not have enough classes, then ignore it
-                continue
-
-            preds = []
-            for _train_index, validate_index in LeaveOneGroupOut().split(X_train, y_train, train_groups):
-                _X, _y, X_val, y_val = X_train[_train_index], y_train[_train_index], X_train[validate_index], y_train[validate_index]
-
-                # Validate if the test set and train set have two classes
-                if self.__validate_label_cnt(_y) == False or self.__validate_label_cnt(y_val) == False: # If one of them does not have enough classes, then ignore it
-                    continue
-
-                clf = self.__get_classifier(method)
-                __X, _X_test = self.__transform_data(method, _X, X_test) # Feature scaling if possible
-                _, X_val = self.__transform_data(method, _X, X_val)
-                clf.fit(__X, _y)
-                y_val_pred = clf.predict(X_val)
-
-                # Run prediction on test set
-                y_preds = clf.predict(_X_test)
-                # print(f'--- Validate {train_groups[validate_index][0]} BA Score: {self.evaluate(y_val, y_val_pred, self.scoring)} --- Test BA Score: {self.evaluate(y_test, y_preds, self.scoring)}')
-                preds.append(y_preds)
-
-            preds = np.mean(np.array(preds), axis=0)
-            y_preds = np.array([0 if value < 0.5 else 1 for value in preds])                    
-
-            # Evaluate balanced accuracy on the predicted results of test set
-            balanced_accuracy = self.evaluate(y_test, y_preds, self.scoring)
-            accuracy = self.evaluate(y_test, y_preds, 'accuracy')
-            balanced_accs.append(balanced_accuracy) 
-            accs.append(accuracy)
-
-            # Save the corresponding user_id
-            test_groups.append(self.groups[test_index][0])
-            print(f'--- Test Group {self.groups[test_index][0]} BA Score: {balanced_accuracy} --- Test Acc Score: {accuracy} --- Train BA Score {self.evaluate(y_train, clf.predict(X_train), self.scoring)} ---')
-        
-        results = { 'groups': test_groups, 'balanced_accuracy_score': balanced_accs, 'accuracy_score': accs }
-        return results
-
-
-    def train_and_infer(self, X_test, y_test):
-        clf = self.__get_classifier(self.strategy)
-        X_train, X_test = self.__transform_data(self.strategy, self.X, X_test)
-        clf.fit(X_train, self.y)
-        y_preds = clf.predict(X_test)
-        balanced_accuracy = self.evaluate(y_test, y_preds)
-        return balanced_accuracy
-
-
     def exec_classifier(self):
-        if self.cross_validation is True:
-            return self.cross_validator(self.strategy)
-        if self.logo_validation is True:
-            return self.leave_one_group_out_validator(self.strategy)
-        if self.basic_logo_validation is True:
-            return self.basic_logo_validator(self.strategy)
+        if self.subject_dependent is True:
+            return self.subject_dependent_evaluate(self.strategy)
+        if self.subject_independent is True:
+            return self.subject_independent_evaluate(self.strategy)
+        if self.hybrid_evaluation is True:
+            return self.hybrid_evaluation(self.strategy)
 
 
-    def evaluate_score(self, y_trues, y_preds, scoring):
-        acc = None
-        if scoring == 'accuracy':
-            acc = accuracy_score(y_trues, y_preds)
-        elif scoring == 'balanced_accuracy':
-            acc = balanced_accuracy_score(y_trues, y_preds)
-        return acc              
-
-    
     def evaluate(self, y_trues, y_preds):
         acc = accuracy_score(y_trues, y_preds)
         ba_acc = balanced_accuracy_score(y_trues, y_preds)

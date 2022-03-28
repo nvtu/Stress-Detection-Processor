@@ -2,7 +2,7 @@ import sys
 import os
 
 
-data_lib = os.path.abspath('../data_preprocessing')
+data_lib = os.path.abspath('../data_processing')
 signal_processing_lib = os.path.abspath('../signal_processing')
 if data_lib not in sys.path:
     sys.path.append(data_lib)
@@ -72,7 +72,7 @@ def extract_statistical_feature(signal, signal_type: str):
 
 def extract_features_for_user(ds_path_manager, data, user_id: str):
     sampling_rate = get_sampling_rate(args.signal)
-    feature_path = get_feature_path(ds_path_manager, user_id, args.signal)
+    feature_path = get_feature_path(ds_path_manager, user_id, args.signal, args.window_size, args.window_shift)
     features = []
     if not os.path.exists(feature_path):
         for task_id, signal_data in data.items():
@@ -105,8 +105,9 @@ def extract_features_for_dataset(ds_path_manager, ds_data):
         print('----------------------------------------')
 
     stats_features = np.array(stats_features)
-    create_folder(ds_path_manager.stats_feature_path)
-    output_file_path = os.path.join(ds_path_manager.stats_feature_path, f'{args.signal}.npy')
+    stats_features_folder_path = os.path.join(ds_path_manager.stats_feature_path, f'{args.window_size}_{args.window_shift}')
+    create_folder(stats_features_folder_path)
+    output_file_path = os.path.join(stats_features_folder_path, f'{args.signal}.npy')
     np.save(output_file_path, stats_features)
 
 
