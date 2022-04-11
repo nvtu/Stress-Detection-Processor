@@ -11,6 +11,16 @@ import math
 
 class SWT_Threshold_Denoiser:
 
+    """
+    The implementation of EDA signal Adaptive Threshold Denoising procedure using Stationary Wavelet-Transform
+    The procedure is described in the paper: 
+        https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5413204/ 
+    """
+
+
+    def __init__(self):
+        pass
+
 
     def __compute_gmm_cdf(self, x, weights, means, covars):
         n_components = len(weights)
@@ -65,6 +75,9 @@ class SWT_Threshold_Denoiser:
 
 
 class EDA_Signal_Processor:
+
+    def __init__(self):
+        pass
 
 
     def eda_clean(self, eda, sampling_rate):

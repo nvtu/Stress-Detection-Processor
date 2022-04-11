@@ -13,11 +13,20 @@ class BVP_Signal_Processor:
 
 
     def winsorization(self, bvp, limit=0.02):
+        """
+        The winsorization method is used to remove outliers from a signal.
+        The originality of this method for BVP processing is from:
+        https://www.researchgate.net/publication/308611962_CONTINUOUS_STRESS_MONITORING_USING_A_WRIST_DEVICE_AND_A_SMARTPHONE
+        """
         output = winsorize(bvp, limits = [limit, limit])
         return output
 
 
     def butter_baseline_drift_removal(self, bvp, sampling_rate):
+        """
+        The idea of bvp baseline drift removal using Butterworth filter follows the methods described in 
+        http://www.jscholaronline.org/articles/JBER/Signal-Processing.pdf
+        """
         BUTTERWORTH_ORDER = 4
         CUTOFF_FREQUENCY = 0.5
         b, a = butter(BUTTERWORTH_ORDER, CUTOFF_FREQUENCY, btype = 'high', fs = sampling_rate)

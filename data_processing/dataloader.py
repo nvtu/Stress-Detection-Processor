@@ -8,9 +8,28 @@ import torch
 
 class DataLoader:
 
+    """
+    Data Loader Management
+    """
+
     def __init__(self, dataset_name: str):
         self.dataset_name = dataset_name
-        self.dp_manager = get_datapath_manager(dataset_name)
+        self.dp_manager = DataPathManager(dataset_name)
+
+
+    def __generate_user_data_structure(self, user_ids: List[str]):
+        """
+        In case the dataset was pre-processed, generate the user data structure on the machine for caching process
+        """
+
+        data_path = os.path.join(self.dp_manager.dataset_path, 'data')
+        create_folder(data_path)
+        for user_id in user_ids:
+            user_folder_path = os.path.join(data_path, str(user_id))
+            create_folder(user_folder_path)
+            feature_folder_path = os.path.join(user_folder_path, 'features')
+            create_folder(feature_folder_path)
+
     
 
     def load_user_data(self, user_id: str):
@@ -50,9 +69,9 @@ class DataLoader:
         """
         ds_data_path = self.dp_manager.processed_dataset_path
         ds_data = pickle.load(open(ds_data_path, 'rb'))
-        if generate_user_data_structure:
+        if gen_user_data_structure:
             user_ids = ds_data['eda'].keys()
-            generate_user_data_structure(self.dataset_name, user_ids)
+            self.__generate_user_data_structure(self.dataset_name, user_ids)
         return ds_data
 
     
