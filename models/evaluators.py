@@ -1,5 +1,5 @@
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, balanced_accuracy_score
-from typing import List
+from typing import List, Optional
 
 
 class Evaluator:
@@ -11,7 +11,7 @@ class Evaluator:
         self.target_metrics = target_metrics
 
 
-    def evaluate_on_metrics(self, y_true, y_pred, metric_name: str):
+    def evaluate_on_metrics(self, y_true, y_pred, metric_name: str) -> Optional[float]:
         if metric_name == 'accuracy':
             return accuracy_score(y_true, y_pred)
         elif metric_name == 'balanced_accuracy':
@@ -25,7 +25,7 @@ class Evaluator:
         return None
 
 
-    def evaluate(self, y_true, y_pred):
+    def evaluate(self, y_true, y_pred) -> List[float]:
         scores = []
         for metrics in self.target_metrics:
             score = self.evaluate_on_metrics(y_true, y_pred, metrics)

@@ -3,12 +3,17 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 
 
-# ACKNOWLEDGEMENT
-# This code is referred from the github repository 
-# https://github.com/m2man/Stress-Detection-with-FC developed by 
-# my colleague -- Manh-Duy Nguyen
+"""
+ACKNOWLEDGEMENT
+This code is referred from the github repository 
+https://github.com/m2man/Stress-Detection-with-FC developed by my colleague -- Manh-Duy Nguyen
+"""
 
 # ----------------- Implementation of Swish activation function -----------------
 class SwishImplementation(torch.autograd.Function):
@@ -37,17 +42,6 @@ class MemoryEfficientSwish(nn.Module):
 # --------------------------------------------------------------------------------
 
 
-def activation_function(name: str = 'relu'):
-    # relu , swish, leaky relu, gelu
-    # Return ReLU activation function by default
-    if name == 'swish':
-        return MemoryEfficientSwish()
-    elif name == 'leaky_relu':
-        return nn.LeakyReLU(0.2)
-    elif name == 'gelu':
-        return nn.GELU()
-    return nn.ReLU()
-
 
 class MLP(nn.Module):
     """
@@ -64,11 +58,23 @@ class MLP(nn.Module):
             # Append the additional feature processing layers if it is not the last layer
             if idx != len(embedding_size) - 1: 
                 modules.append(nn.BatchNorm1d(num_features=embedding_size[idx]))
-                modules.append(activation_function(name = activation))
+                modules.append(self.__activation_function(name = activation))
                 if dropout is not None:
                     modules.append(nn.Dropout(dropout))
         self.mlp = nn.Sequential(*modules)
-            
+
+
+    def __activation_function(self, name: str = 'relu'):
+        # relu , swish, leaky relu, gelu
+        # Return ReLU activation function by default
+        if name == 'swish':
+            return MemoryEfficientSwish()
+        elif name == 'leaky_relu':
+            return nn.LeakyReLU(0.2)
+        elif name == 'gelu':
+            return nn.GELU()
+        return nn.ReLU()
+
 
     def forward(self, x):
         return self.mlp(x)
@@ -122,3 +128,33 @@ class BranchingNN(nn.Module):
         combined_embedding_features = torch.cat(embedding_features, axis=-1)
         combined_logit = self.combined_nn(combined_embedding_features)
         return combined_logit, logits_cls
+
+
+class MLModel:
+    """
+    A class for defining the Machine Learning models of sklearn library 
+    with pre-defined parameters for the stress detection task.
+    """
+
+
+    def __init__(self, method, random_state: int = 0):
+        self.random_state  = random_state
+        self.method = method
+
+    def get_classifier(self):
+        clf = None 
+        if self.method == 'random_forest':
+            clf = RandomForestClassifier(n_estimators = 250, random_state = self.random_state, n_jobs = -1, max_features='sqrt', max_depth=8, min_samples_split=2, min_samples_leaf=4,
+                                oob_score=True, bootstrap=True, class_weight = 'balanced', )
+        elif self.method == 'logistic_regression':
+            clf = LogisticRegression(random_state = self.random_state)
+        elif self.method == 'svm':
+            clf = SVC(C = 10, random_state = self.random_state, class_weight = 'balanced')
+        elif self.method == 'knn':
+            clf = KNeighborsClassifier(n_jobs = -1, weights = 'distance')
+        elif self.method == 'Voting3CLF':
+            estimators = [('rf', self.get_classifier('random_forest')), 
+                ('svm', self.get_classifier('svm')),
+                ('knn', self.get_classifier('knn'))]
+            clf = VotingClassifier(estimators = estimators, n_jobs = -1, verbose = True)
+        return clf

@@ -1,7 +1,3 @@
-from collections import defaultdict
-from curses import meta
-from signal import signal
-from time import time
 from datapath_manager import DataPathManager
 from tqdm import tqdm
 import pandas as pd
@@ -12,6 +8,17 @@ import pickle
 
 
 class DatasetPreprocessor:
+    """
+    Preprocess the raw data obtain from the Empatica E4 device 
+    to generate a combined data file for feature extraction.
+    NOTE: This code only works for the dataset with the data structure as defined by Empatica E4:
+        dataset_name
+            |- user_id
+                |- acc
+                |- bvp
+                |- eda
+                |- temp
+    """
 
     def __init__(self, dataset_name: str):
         self.dataset_name = dataset_name 

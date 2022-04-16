@@ -12,7 +12,7 @@ if parent_dir not in sys.path:
 
 import argparse
 from datapath_manager import DataPathManager
-from dataloader import DataLoader
+from dataloader import DatasetLoader
 from tqdm import tqdm
 import numpy as np
 
@@ -33,7 +33,7 @@ class MetadataGenerator():
         self.window_size = window_size
         self.window_shhift = window_shift
         self.ds_path_manager = DataPathManager(dataset_name)
-        self.ds_data = DataLoader(dataset_name).load_dataset_data()
+        self.ds_data = DatasetLoader(dataset_name).load_dataset_data()
         
 
     def post_processing_ground_truth(self, ground_truth):

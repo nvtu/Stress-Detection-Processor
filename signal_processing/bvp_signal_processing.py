@@ -160,7 +160,7 @@ class BVP_Signal_Processor:
 
     
     def clean_rr_intervals(self, rr_intervals):
-        rr_intervals_list = rr_intervals
+        rr_intervals_list = np.array(rr_intervals)
 
         # This remove outliers from signal
         rr_intervals_without_outliers = remove_outliers(rr_intervals=rr_intervals_list,  verbose = False,

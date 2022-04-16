@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 import torch
 
 
-class DataLoader:
+class DatasetLoader:
 
     """
     Data Loader Management
@@ -112,11 +112,11 @@ class EmbeddingDataLoader:
 
     def __init__(self, dataset, ground_truth):
         self.dataset = EmbeddingDataSet(dataset, ground_truth)
-        self.ground_truth = ground_truth
 
 
     def generate_batch(self, batch):
         feats, labels = zip(*batch)
+        print(feats, labels)
         feats = torch.tensor(np.array([x for x in feats]).squeeze(1).float())
         labels = torch.tensor(labels).float()
         return feats, labels
@@ -124,10 +124,10 @@ class EmbeddingDataLoader:
 
     def make_dataloader(self, is_train = True, **args):
         if is_train:
-            num_classes = Counter(np.array(self.ground_truth).astype(int))
+            num_classes = Counter(np.array(self.dataset.ground_truth).astype(int))
             classes = np.array([num_classes[key] for key in sorted(num_classes.keys())])
             weight = 1. / classes
-            sample_weights = np.array([weight[cls] for cls in self.ground_truth])
+            sample_weights = np.array([weight[cls] for cls in self.dataset.ground_truth])
             sample_weights = torch.from_numpy(sample_weights)
             sampler = WeightedRandomSampler(sample_weights, len(sample_weights))
         else:

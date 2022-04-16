@@ -38,7 +38,7 @@ class SWT_Threshold_Denoiser:
             cdf_pos = self.__compute_gmm_cdf(x_pos, gmm.weights_, gmm.means_, gmm.covariances_)
             cdf_neg = self.__compute_gmm_cdf(x_neg, gmm.weights_, gmm.means_, gmm.covariances_)
             diff_cdf_pos = abs(cdf_pos - cdf_value)
-            diff_cdf_neg = abs(cdf_neg-cdf_value)
+            diff_cdf_neg = abs(cdf_neg - cdf_value)
             x = x_pos if diff_cdf_pos <= diff_cdf_neg else x_neg
         else:
             while max_value - min_value > EPS:
@@ -80,7 +80,7 @@ class EDA_Signal_Processor:
         pass
 
 
-    def eda_clean(self, eda, sampling_rate):
+    def eda_clean(self, eda, sampling_rate: int):
         HIGHCUT_FREQUENCY = 5 # defaults as BioSPPy
         nyquist_freq = 2 * HIGHCUT_FREQUENCY / sampling_rate # Normalize frequency to Nyquist Frequency (Fs/2)
         if 0 < nyquist_freq < 1:

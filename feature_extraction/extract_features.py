@@ -15,7 +15,7 @@ from typing import List
 from bvp_signal_processing import BVP_Signal_Processor
 from eda_signal_processing import SWT_Threshold_Denoiser, EDA_Signal_Processor
 from temp_signal_processing import TEMP_Signal_Processor
-from dataloader import DataLoader
+from dataloader import DatasetLoader
 from datapath_manager import create_folder, DataPathManager
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
@@ -31,7 +31,7 @@ class StatisticalFeatureExtractor:
         self.window_shift = window_shift
         self.sampling_rate = self.__get_sampling_rate()
         self.ds_path_manager = DataPathManager(self.dataset_name)
-        self.ds_data = DataLoader(self.dataset_name).load_dataset_data(gen_user_data_structure = True)
+        self.ds_data = DatasetLoader(self.dataset_name).load_dataset_data(gen_user_data_structure = True)
 
    
     def __get_sampling_rate(self):
@@ -43,19 +43,18 @@ class StatisticalFeatureExtractor:
 
 
     def clean_signal(self, signal):
-        cleaned_signal = signal.copy()
         if self.signal_type == 'eda':
             swt_denoiser = SWT_Threshold_Denoiser()
-            cleaned_signal = swt_denoiser.denoise(cleaned_signal)
+            cleaned_signal = swt_denoiser.denoise(signal)
             cleaned_signal = MinMaxScaler().fit_transform(cleaned_signal.reshape(-1, 1)).ravel()
         elif self.signal_type == 'bvp':
             bvp_processor = BVP_Signal_Processor()
-            cleaned_signal = bvp_processor.clean_bvp(cleaned_signal, self.sampling_rate)
+            cleaned_signal = bvp_processor.clean_bvp(signal, self.sampling_rate)
             cleaned_signal = bvp_processor.min_max_norm(cleaned_signal)
         return cleaned_signal
 
 
-    def extract_statistical_feature(self, signal):
+    def extract_statistical_feature(self, signal: np.array(float)) -> np.array(float):
         features = None
         if self.signal_type == 'eda':
             eda_processor = EDA_Signal_Processor()
@@ -81,7 +80,8 @@ class StatisticalFeatureExtractor:
                 # The true index of the signal at a time-point
                 for current_iter in tqdm(range(first_iter, len_signal, step)): # current_iter is "second_iter"
                     previous_iter = current_iter - first_iter
-                    signal = np.array(signal_data[previous_iter:current_iter])
+                    # Copy the signal by creating a new instance to prevent the original signal from being modified
+                    signal = np.array(signal_data[previous_iter:current_iter]) 
                     # Clean signal depends on the signal type
                     signal = self.clean_signal(signal)
                     # Extract statistical features from cleaned signal
@@ -103,9 +103,9 @@ class StatisticalFeatureExtractor:
             print('----------------------------------------')
 
         stats_features = np.array(stats_features)
-        stats_features_folder_path = os.path.join(self.ds_path_manager.stats_feature_path, f'{args.window_size}_{args.window_shift}')
+        stats_features_folder_path = os.path.join(self.ds_path_manager.stats_feature_path, f'{self.window_size}_{self.window_shift}')
         create_folder(stats_features_folder_path)
-        output_file_path = os.path.join(stats_features_folder_path, f'{args.signal}.npy')
+        output_file_path = os.path.join(stats_features_folder_path, f'{self.signal_type}.npy')
         np.save(output_file_path, stats_features)
 
 
@@ -114,9 +114,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset_name", type=str)
     parser.add_argument("signal", type=str)
+    parser.add_argument("--user_id", type=str, default=None)
     parser.add_argument("--window_shift", type=float, default=0.25)
     parser.add_argument("--window_size", type=float, default=60)
-    parser.add_argument("--user_id", type=str, default=None)
 
     args = parser.parse_args()
 

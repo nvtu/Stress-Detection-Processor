@@ -4,23 +4,22 @@ from typing import Tuple, Dict
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.model_selection import StratifiedKFold, LeaveOneGroupOut, cross_validate, GridSearchCV, train_test_split, ParameterGrid
-from sklearn.metrics import balanced_accuracy_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import balanced_accuracy_score, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from collections import Counter
+from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 
-class BinaryClassifier:
+class BinaryStressClassifier:
 
     def __init__(self, X: np.array, y: np.array, strategy: str, groups: np.array = None,
                     random_state: int = 0, 
                     subject_dependent: bool = False, 
                     subject_independent: bool = False,
-                    hybrid_evaluation: bool = False):
+                    use_deep_model: bool = False):
         self.X = X
         self.y = y
         self.strategy = strategy # Stress detection strategy - possible options: mlp, knn, svm, logistic_regression, random_forest
@@ -28,7 +27,7 @@ class BinaryClassifier:
         self.random_state = random_state
         self.subject_dependent = subject_dependent # Subject-dependent model evaluation based on cross-validation approach
         self.subject_independent = subject_independent # Subject-independent model evaluation based on Leave one group out approach
-        self.hybrid_evaluation = hybrid_evaluation
+        self.use_deep_model = use_deep_model
     
 
     def __get_hyper_parameters(self, method): # Deprecated
@@ -116,6 +115,7 @@ class BinaryClassifier:
         for _, test_index in tqdm(logo.split(self.X, self.y, self.groups)):
             user_dataset, user_ground_truth = self.X[test_index], self.y[test_index]
             train_subject = self.groups[test_index][0]        
+
             # Validate if the test set and train set have enough classes
             if self.__validate_label_cnt(user_ground_truth) == False:
                 continue
@@ -174,9 +174,6 @@ class BinaryClassifier:
         return results
 
 
-    def hybrid_evaluation(self, method: str) -> Dict[str, list]:
-        pass
-
 
     def __validate_label_cnt(self, y):
         num_classes = len(np.unique(y))
@@ -188,8 +185,6 @@ class BinaryClassifier:
             return self.subject_dependent_evaluate(self.strategy)
         if self.subject_independent is True:
             return self.subject_independent_evaluate(self.strategy)
-        if self.hybrid_evaluation is True:
-            return self.hybrid_evaluation(self.strategy)
 
 
     def evaluate(self, y_trues, y_preds):
