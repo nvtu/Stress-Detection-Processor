@@ -14,7 +14,7 @@ class DatasetLoader:
 
     def __init__(self, dataset_name: str):
         self.dataset_name = dataset_name
-        self.dp_manager = DataPathManager(dataset_name)
+        self.dp_manager = DataPathManager(self.dataset_name).ds_path_manager
 
 
     def __generate_user_data_structure(self, user_ids: List[str]):
@@ -23,7 +23,6 @@ class DatasetLoader:
         """
 
         data_path = os.path.join(self.dp_manager.dataset_path, 'data')
-        create_folder(data_path)
         for user_id in user_ids:
             user_folder_path = os.path.join(data_path, str(user_id))
             create_folder(user_folder_path)
@@ -71,7 +70,7 @@ class DatasetLoader:
         ds_data = pickle.load(open(ds_data_path, 'rb'))
         if gen_user_data_structure:
             user_ids = ds_data['eda'].keys()
-            self.__generate_user_data_structure(self.dataset_name, user_ids)
+            self.__generate_user_data_structure(user_ids)
         return ds_data
 
     

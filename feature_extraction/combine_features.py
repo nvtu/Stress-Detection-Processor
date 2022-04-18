@@ -29,7 +29,7 @@ def combine_features(dataset_name: str):
     The iteration order follows the lexicographical order of the file names
     NOTE: Check the configuration files of the BranchingNN class to see which features are used and ensure the correct dimensions are used for each branch
     """
-    ds_path_manager = DataPathManager(dataset_name)
+    ds_path_manager = DataPathManager(dataset_name).ds_path_manager
     stats_feature_folder_path = os.path.join(ds_path_manager.stats_feature_path, f'{args.window_size}_{args.window_shift}')
     features_path = sorted([os.path.join(stats_feature_folder_path, feature_path) for feature_path in os.listdir(stats_feature_folder_path)])
     output_folder_path = os.path.join(ds_path_manager.combined_stats_feature_path, f'{args.window_size}_{args.window_shift}')

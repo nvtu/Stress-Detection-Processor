@@ -34,12 +34,16 @@ class DatasetPath:
             |       |_____ user_id
             |__ stats_features: Combined statistical features
             |__ processed_dataset_path.pkl: Dataset after preprocessing
+            |__ combined_stats_feature_path: Combined statistical features folder path
             |__ metadata.csv: Metadata of the dataset containing the user_id, session_id, start_time, end_time, label
     """
     dataset_path: str
     metadata_path: str
     processed_dataset_path: str
     stats_feature_path: str
+    combined_stats_feature_path: str
+    model_folder_path: str
+    log_folder_path: str
     user_data_paths: Dict[str, UserDataPath]
 
    
@@ -51,8 +55,7 @@ class DataPathManager:
     
     def __init__(self, dataset_name: str):
         self.dataset_name = dataset_name
-        self.ds_path_manager = self.__get_datapath_manager()
-
+        self.ds_path_manager = self.get_datapath_manager()
    
 
     def get_feature_path(self, user_id: str, signal_type: str, window_size: float, window_shift: float):
@@ -69,13 +72,44 @@ class DataPathManager:
         folder_path = os.path.join(self.ds_path_manager.user_data_paths[user_id].feature_path, f'{window_size}_{window_shift}')
         create_folder(folder_path)
         feature_path = os.path.join(folder_path, f'{signal_type}.npy')
-        if not os.path.exists(feature_path):
-            raise ValueError(f'Signal type {signal_type} with {window_size} -- {window_shift} has not yet been created!')
+        # if not os.path.exists(feature_path):
+        #     raise ValueError(f'Signal type {signal_type} with {window_size} -- {window_shift}: {feature_path} has not yet been created!')
         return feature_path
+
+    
+    def get_saved_model_path(self, user_id: str, model_name: str, window_size: float, window_shift: float):
+        """
+        Get the path of the saved model
+        The structure of the saved model path is as follows:
+            dataset_path
+                |__ models
+                    |__ {window_size}_{window_shift}
+                        |__ {user_id}_{model_name}_{window_size}_{window_shift}.[pkl | pth]
+        """
+        folder_path = os.path.join(self.ds_path_manager.model_folder_path, f'{window_size}_{window_shift}')
+        create_folder(folder_path)
+        extension = 'pkl' if model_name in ['svm', 'random_forest', 'knn'] else 'pth'
+        model_path = os.path.join(folder_path, f'{user_id}_{model_name}_{window_size}_{window_shift}.{extension}')
+        return model_path
+
+    
+    def get_log_path(self, user_id: str, model_name: str, window_size: float, window_shift: float):
+        """
+        Get the path of the log file
+        The structure of the log file path is as follows:
+            dataset_path
+                |__ logs
+                    |__ {window_size}_{window_shift}
+                        |__ {user_id}_{model_name}_{window_size}_{window_shift}.log
+        """
+        folder_path = os.path.join(self.ds_path_manager.log_folder_path, f'{window_size}_{window_shift}')
+        create_folder(folder_path)
+        log_path = os.path.join(folder_path, f'{user_id}_{model_name}_{window_size}_{window_shift}.log')
+        return log_path
         
 
     @lru_cache(maxsize=None)
-    def __get_datapath_manager(self):
+    def get_datapath_manager(self):
         """
         Create Datapath Manager from a dataset
         """
@@ -90,6 +124,7 @@ class DataPathManager:
         # Construct user data paths
         user_data_paths = {}
         data_path = os.path.join(dataset_path, 'data')
+        create_folder(data_path)
         list_users = sorted([user_id for user_id in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, user_id))])
         for user_id in list_users:
             stats_feature_folder = os.path.join(data_path, user_id, 'features')
@@ -105,11 +140,23 @@ class DataPathManager:
             )
             user_data_paths[user_id] = user_data_path
 
+        # Create other folder paths
+        log_folder_path = os.path.join(dataset_path, 'logs')
+        create_folder(log_folder_path)
+        model_folder_path = os.path.join(dataset_path, 'models')
+        create_folder(model_folder_path)
+        combined_stats_feature_path = os.path.join(dataset_path, 'combined_stats_features')
+        create_folder(combined_stats_feature_path)
+        stats_feature_path = os.path.join(dataset_path, 'stats_features')
+        create_folder(stats_feature_path)
+
         ds_path_manager = DatasetPath(
             dataset_path = dataset_path,
             metadata_path = metadata_path,
             processed_dataset_path = os.path.join(dataset_path, f'{self.dataset_name}.pkl'),
-            stats_feature_path = os.path.join(dataset_path, f'stats_features'),
+            stats_feature_path = stats_feature_path,
+            combined_stats_feature_path = combined_stats_feature_path,
+            model_folder_path = model_folder_path,
             user_data_paths = user_data_paths
         )
 

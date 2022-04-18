@@ -32,7 +32,7 @@ class MetadataGenerator():
         self.dataset_name = dataset_name
         self.window_size = window_size
         self.window_shhift = window_shift
-        self.ds_path_manager = DataPathManager(dataset_name)
+        self.ds_path_manager = DataPathManager(dataset_name).ds_path_manager
         self.ds_data = DatasetLoader(dataset_name).load_dataset_data()
         
 

@@ -41,8 +41,6 @@ class MemoryEfficientSwish(nn.Module):
 
 # --------------------------------------------------------------------------------
 
-
-
 class MLP(nn.Module):
     """
     A Simple Neural Network (Multilayer-Perceptron)

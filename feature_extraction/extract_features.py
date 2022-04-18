@@ -30,10 +30,11 @@ class StatisticalFeatureExtractor:
         self.window_size = window_size
         self.window_shift = window_shift
         self.sampling_rate = self.__get_sampling_rate()
-        self.ds_path_manager = DataPathManager(self.dataset_name)
         self.ds_data = DatasetLoader(self.dataset_name).load_dataset_data(gen_user_data_structure = True)
+        self.dp_manager = DataPathManager(self.dataset_name)
+        self.ds_path_manager = self.dp_manager.ds_path_manager
 
-   
+
     def __get_sampling_rate(self):
         if self.signal_type == 'eda' or self.signal_type == 'temp':
             return 4
@@ -43,6 +44,7 @@ class StatisticalFeatureExtractor:
 
 
     def clean_signal(self, signal):
+        cleaned_signal = signal
         if self.signal_type == 'eda':
             swt_denoiser = SWT_Threshold_Denoiser()
             cleaned_signal = swt_denoiser.denoise(signal)
@@ -70,7 +72,7 @@ class StatisticalFeatureExtractor:
 
     def extract_features_for_user(self, user_id: str):
         data = self.ds_data[self.signal_type][user_id]
-        feature_path = self.ds_path_manager.get_feature_path(user_id, self.signal, self.window_size, self.window_shift)
+        feature_path = self.dp_manager.get_feature_path(user_id, self.signal_type, self.window_size, self.window_shift)
         features = []
         if not os.path.exists(feature_path):
             for task_id, signal_data in data.items():
@@ -96,9 +98,9 @@ class StatisticalFeatureExtractor:
 
     def extract_features_for_dataset(self):
         stats_features = []
-        for user_id, data in self.ds_data[self.signal_type].items():
+        for user_id in self.ds_data[self.signal_type].keys():
             print("Processing ---- {} ----".format(user_id))
-            features = self.extract_features_for_user(data, str(user_id))
+            features = self.extract_features_for_user(str(user_id))
             stats_features += features
             print('----------------------------------------')
 
@@ -119,6 +121,10 @@ if __name__ == '__main__':
     parser.add_argument("--window_size", type=float, default=60)
 
     args = parser.parse_args()
+
+    assert(args.signal in ['bvp', 'eda', 'temp'])
+
+    print(f"->>> Extracting {args.signal} features for {args.dataset_name} dataset with window size {args.window_size} and window shift {args.window_shift}")
 
     statistical_feature_extractor = StatisticalFeatureExtractor(args.dataset_name, args.signal, args.window_size, args.window_shift)
 

@@ -11,7 +11,7 @@ import pickle
 from typing import List
 
 
-class TrainBranchingNN:
+class BranchNeuralNetworkTrainer:
 
     """
     This is the Branching Neural Network model used in stress detection problem, which is described in the paper:
@@ -19,7 +19,7 @@ class TrainBranchingNN:
     """
 
     def __init__(self, optimizer, loss_func, save_log_path: str, save_model_path: str, target_metrics: List[str], config_dict):
-        super(TrainBranchingNN, self).__init__()
+        super(BranchNeuralNetworkTrainer, self).__init__()
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -31,6 +31,7 @@ class TrainBranchingNN:
 
         self.optimizer = optimizer
         self.loss_func = loss_func.to(self.device) if loss_func is not None else loss_func
+        self.save_log_path = save_log_path
         self.save_model_path = save_model_path # Directory where model files are saved
         self.target_metrics = target_metrics # The metrics to be used for evaluating the training process
         self.config_dict = config_dict
@@ -146,7 +147,7 @@ class TrainBranchingNN:
         return eval_results
 
     
-class TrainMachineLearningModel:
+class MachineLearningModelTrainer:
     """
     The Trainer class for Machine Learning models including SVM, Random Forest, Logistic Regression, and K-Nearest Neighbors.
     NOTE: These Machine Learning models are originated from the sklearn library. Therefore, incremental training is not supported. 
@@ -210,7 +211,7 @@ class TrainMachineLearningModel:
             eval_results = self.predict_and_evaluate(validate_dataloader)
 
             # Log the validation evaluation results
-            str_info = "Validation Evaluation Results: {}: {}".format(self.target_metrics, eval_results)
+            str_info = "->>> Validation Evaluation Results: {}: {}".format(self.target_metrics, eval_results)
             self.__logger.append(str_info)
             print(str_info)
 

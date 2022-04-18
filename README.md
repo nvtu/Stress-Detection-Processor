@@ -7,6 +7,11 @@ The Stress Detection Pipeline comprises of two following steps:
 3. [Use the trained model to predict other data](#infer)
 
 # 1. Bio-signal Processing & Statistical Feature Extraction
+Change the current directory to **feature_extraction**, which contains the necessary scripts:
+```
+$ cd ./feature_extraction
+```
+
 This process can be run in parallel to boost the speed of the statistical feature extraction by running the command-line separately for each physiological signal. **The bio-signal processing is included in the feature extraction progress**. <a name="bio"></a>
 ```
 $ python extract_features.py --dataset_name [DATASET_NAME] --signal [SIGNAL] --window_size [WINDOW_SIZE] --window_shift [WINDOW_SHIFT]
@@ -25,10 +30,10 @@ $ python extract_features.py --dataset_name [DATASET_NAME] --signal [SIGNAL] --w
 $ python generate_feature_metadata.py --dataset_name [DATASET_NAME] --window_size [WINDOW_SIZE] --window_shift [WINDOW_SHIFT] --user_id [USER_ID]
 ```
 In this step, the aforementioned parameters in the command-lines are as follows:
-- DATASET_NAME: WESAD, AffectiveROAD, CognitiveDS, DCU_NVT_EXP2
-- SIGNAL: eda, bvp, temp
-- WINDOW_SIZE: 60 (by default as frequently used by many related paper)
-- WINDOW_SHIFT: 0.25 (by default as frequently used by many related paper)
+- **DATASET_NAME**: WESAD, AffectiveROAD, CognitiveDS, DCU_NVT_EXP2
+- **SIGNAL**: eda, bvp, temp
+- **WINDOW_SIZE**: 60 (by default as frequently used by many related paper)
+- **WINDOW_SHIFT**: 0.25 (by default as frequently used by many related paper)
 
 
 # 2. Train Stress Detection Model <a name="train"></a> 
