@@ -74,15 +74,18 @@ class DatasetLoader:
         return ds_data
 
     
-    def load_data_for_training(self):
+    def load_data_for_training(self, window_shift: float = 0.25, window_size: int = 60):
         """
         Load dataset for training including combined features 
         """
-        dataset = np.load(self.dp_manager.combined_feature_path)
-        groups = np.load(self.dp_manager.combined_groups_path)
-        ground_truth = np.load(self.dp_manager.combined_ground_truth_path)
+        combined_feature_folder = os.path.join(self.dp_manager.combined_stats_feature_path, f'{window_size}_{window_shift}')
+        combined_stats_feature_path = os.path.join(combined_feature_folder, f'{self.dataset_name}_combined_features.npy')
+        combined_group_path = os.path.join(combined_feature_folder, f'{self.dataset_name}_combined_groups.npy')
+        combined_ground_truth_path = os.path.join(combined_feature_folder, f'{self.dataset_name}_combined_ground_truth.npy')
+        dataset = np.load(combined_stats_feature_path)
+        groups = np.load(combined_group_path)
+        ground_truth = np.load(combined_ground_truth_path)
         return dataset, ground_truth, groups
-
 
 
 class EmbeddingDataSet(Dataset):

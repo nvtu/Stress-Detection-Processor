@@ -23,6 +23,7 @@ class UserDataPath:
     temp_path: str
     processed_data_path: str
     feature_path: str # Output feature path
+    combined_stats_feature_path: str
 
 
 @dataclass
@@ -32,9 +33,11 @@ class DatasetPath:
         dataset_name
             |__ user_data_path
             |       |_____ user_id
-            |__ stats_features: Combined statistical features
+            |__ stats_features_path: Combined statistical features
             |__ processed_dataset_path.pkl: Dataset after preprocessing
             |__ combined_stats_feature_path: Combined statistical features folder path
+            |__ model_folder_path: Folder path containing trained models
+            |__ log_folder_path: Folder path containing the log files when training models
             |__ metadata.csv: Metadata of the dataset containing the user_id, session_id, start_time, end_time, label
     """
     dataset_path: str
@@ -77,7 +80,7 @@ class DataPathManager:
         return feature_path
 
     
-    def get_saved_model_path(self, user_id: str, model_name: str, window_size: float, window_shift: float):
+    def get_saved_model_path(self, user_id: str, model_name: str, model_type: str, window_size: float, window_shift: float):
         """
         Get the path of the saved model
         The structure of the saved model path is as follows:
@@ -86,14 +89,14 @@ class DataPathManager:
                     |__ {window_size}_{window_shift}
                         |__ {user_id}_{model_name}_{window_size}_{window_shift}.[pkl | pth]
         """
-        folder_path = os.path.join(self.ds_path_manager.model_folder_path, f'{window_size}_{window_shift}')
+        folder_path = os.path.join(self.ds_path_manager.model_folder_path, f'{window_size}_{window_shift}', model_type, model_name)
         create_folder(folder_path)
         extension = 'pkl' if model_name in ['svm', 'random_forest', 'knn'] else 'pth'
-        model_path = os.path.join(folder_path, f'{user_id}_{model_name}_{window_size}_{window_shift}.{extension}')
+        model_path = os.path.join(folder_path, f'{user_id}_{model_name}_{model_type}_{window_size}_{window_shift}.{extension}')
         return model_path
 
     
-    def get_log_path(self, user_id: str, model_name: str, window_size: float, window_shift: float):
+    def get_log_path(self, model_name: str, model_type: str, window_size: float, window_shift: float):
         """
         Get the path of the log file
         The structure of the log file path is as follows:
@@ -102,9 +105,9 @@ class DataPathManager:
                     |__ {window_size}_{window_shift}
                         |__ {user_id}_{model_name}_{window_size}_{window_shift}.log
         """
-        folder_path = os.path.join(self.ds_path_manager.log_folder_path, f'{window_size}_{window_shift}')
+        folder_path = os.path.join(self.ds_path_manager.log_folder_path, f'{window_size}_{window_shift}', model_type)
         create_folder(folder_path)
-        log_path = os.path.join(folder_path, f'{user_id}_{model_name}_{window_size}_{window_shift}.log')
+        log_path = os.path.join(folder_path, f'{model_name}_{model_type}_{window_size}_{window_shift}.log')
         return log_path
         
 
@@ -127,8 +130,12 @@ class DataPathManager:
         create_folder(data_path)
         list_users = sorted([user_id for user_id in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, user_id))])
         for user_id in list_users:
+
             stats_feature_folder = os.path.join(data_path, user_id, 'features')
+            combined_stats_feature_folder = os.path.join(data_path, user_id, 'combined_features')
             create_folder(stats_feature_folder)
+            create_folder(combined_stats_feature_folder)
+
             user_data_path = UserDataPath(
                 user_data_path = os.path.join(data_path, user_id),
                 acc_path = os.path.join(data_path, user_id, 'ACC.csv'),
@@ -137,6 +144,7 @@ class DataPathManager:
                 temp_path = os.path.join(data_path, user_id, 'TEMP.csv'),
                 processed_data_path = os.path.join(data_path, user_id, f'{self.dataset_name}_{user_id}.pkl'),
                 feature_path = stats_feature_folder,
+                combined_stats_feature_path = combined_stats_feature_folder
             )
             user_data_paths[user_id] = user_data_path
 
@@ -157,6 +165,7 @@ class DataPathManager:
             stats_feature_path = stats_feature_path,
             combined_stats_feature_path = combined_stats_feature_path,
             model_folder_path = model_folder_path,
+            log_folder_path = log_folder_path,
             user_data_paths = user_data_paths
         )
 

@@ -5,6 +5,7 @@ from models.trainers import BranchNeuralNetworkTrainer, MachineLearningModelTrai
 from tqdm import tqdm
 from typing import List, Dict
 from data_processing.data_splitter import DataSplitter
+from utils.logger import Logger
 
 
 class BinaryStressClassifier:
@@ -24,23 +25,34 @@ class BinaryStressClassifier:
         self.window_size = window_size
     
 
-    def train(self) -> Dict[str, list]:
+    def train(self):
+        str_info = "---- Training {} {} model of {} dataset with window size = {} and window shift = {}... ----"\
+            .format(self.model_type, self.strategy, self.dataset_name, self.window_size, self.window_shift)
+        print(str_info)
+
         ds_path_manager = DataPathManager(self.dataset_name)
+        saved_log_path = ds_path_manager.get_log_path(self.strategy, self.model_type, self.window_size, self.window_shift)
+        
+        logger = Logger(saved_log_path)
+        logger.write(str_info)
 
         # Data splitter has already taken the responsibility to split the data according to the dependent/independent method
         ds_splitter = DataSplitter(self.dataset_name, self.model_type) 
-        data = ds_splitter.next()
+        for _ in tqdm(range(ds_splitter.num_subjects)):
+            # Get next user data for training
+            data = ds_splitter.next()
 
-        while data is not None:
             X_train, y_train, X_test, y_test, target_user = data
+            str_info = "Evaluating the model for user: {}".format(target_user)
+            print(str_info)
+            logger.append(str_info)
 
             # Create the EmbeddingDataLoader object for trainer input
             train_embedding_dl = EmbeddingDataLoader(X_train, y_train)
             validate_embedding_dl = EmbeddingDataLoader(X_test, y_test)
 
             # Generate the directories to save models and log results
-            saved_model_path = ds_path_manager.get_saved_model_path(target_user, self.strategy, self.window_size, self.window_shift)
-            saved_log_path = ds_path_manager.get_log_path(target_user, self.strategy, self.window_size, self.window_shift)
+            saved_model_path = ds_path_manager.get_saved_model_path(target_user, self.strategy, self.model_type, self.window_size, self.window_shift)
 
             if self.strategy in ['knn', 'random_forest', 'svm']:
 
@@ -52,7 +64,3 @@ class BinaryStressClassifier:
                 model.train(train_embedding_dl, validate_embedding_dl)
             elif self.strategy in ['branch_neural_network']:
                 model = BranchNeuralNetworkTrainer(self.strategy, self.random_state, self.window_shift, self.window_size)
-            
-            # Get next user data for training
-            data = ds_splitter.next()
-        

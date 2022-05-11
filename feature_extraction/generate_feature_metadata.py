@@ -37,13 +37,12 @@ class MetadataGenerator():
         
 
     def post_processing_ground_truth(self, ground_truth):
+        ground_truth = np.array(ground_truth)
         if self.dataset_name == 'AffectiveROAD':
-            ground_truth = np.array(ground_truth)
-            # ground_truth[ground_truth == 0] = -1
-            # ground_truth[ground_truth == 1] = 0
-            # ground_truth[ground_truth == 2] = 1
+            ground_truth[ground_truth == 0] = -1
+            ground_truth[ground_truth == 1] = 0
+            ground_truth[ground_truth == 2] = 1
         elif self.dataset_name == 'CognitiveDS':
-            ground_truth = np.array(ground_truth)
             ground_truth[ground_truth < 2] = 0
             ground_truth[ground_truth > 1] = 1
         return ground_truth.tolist() 
@@ -62,9 +61,9 @@ class MetadataGenerator():
             first_iter = int(args.window_size * MetadataGenerator.DEVICE_MIN_SAMPLING_RATE)
             group += [user_id for _ in range(first_iter, len_signal, step)]
 
-            if data_ground_truth[task_id] != np.array: # If the ground-truth is a single label
+            if type(data_ground_truth[task_id]) != list: # If the ground-truth is a single label
                 ground_truth += [data_ground_truth[task_id] for _ in range(first_iter, len_signal, step)]
-            else: ground_truth += data_ground_truth[task_id].tolist() # In case the ground-truth is a list of continuous values, i.e AffectiveROAD
+            else: ground_truth += data_ground_truth[task_id] # In case the ground-truth is a list of continuous values, i.e AffectiveROAD
 
         ground_truth = self.post_processing_ground_truth(ground_truth)
         ground_truth_path = os.path.join(self.ds_path_manager.user_data_paths[user_id].feature_path, f'{args.window_size}_{args.window_shift}', 'ground_truth.npy')

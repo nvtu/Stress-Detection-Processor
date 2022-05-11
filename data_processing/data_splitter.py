@@ -3,7 +3,6 @@ from .datapath_manager import DataPathManager
 from sklearn.model_selection import LeaveOneGroupOut
 import numpy as np
 from typing import List, Optional
-from tqdm import tqdm
 
 
 class DataSplitter:
@@ -24,7 +23,7 @@ class DataSplitter:
         self.num_subjects = len(self.__indexed)
 
 
-    def next(self) -> Optional[List[np.array, np.array, np.array, np.array]]:
+    def next(self):
         """
         Get next train and test user data
         """
@@ -38,7 +37,7 @@ class DataSplitter:
         self.__current_index = -1
 
 
-    def __get_train_test_data(self) -> Optional[List[np.array, np.array, np.array, np.array, str]]:
+    def __get_train_test_data(self):
         """
         This function is specially designed for next() function to get the next train & test data.
         It cannot be used solely with other function in this class.
@@ -94,7 +93,7 @@ class DataSplitter:
         
         indices = []
         
-        for _, test_index in tqdm(LeaveOneGroupOut().split(self.dataset, self.ground_truth, self.groups)):
+        for _, test_index in LeaveOneGroupOut().split(self.dataset, self.ground_truth, self.groups):
             user_ground_truth = self.ground_truth[test_index]
 
             # Validate if the test set and train set have enouh classes
@@ -112,7 +111,7 @@ class DataSplitter:
             - Test_data: the targeted subject
         """
         indices = []
-        for train_index, test_index in tqdm(LeaveOneGroupOut().split(self.dataset, self.ground_truth, self.groups)):
+        for train_index, test_index in LeaveOneGroupOut().split(self.dataset, self.ground_truth, self.groups):
             y_train, y_test = self.ground_truth[train_index], self.ground_truth[test_index]
 
             # Validate if the test set and train set have enouh classes

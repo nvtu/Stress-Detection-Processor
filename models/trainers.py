@@ -201,8 +201,7 @@ class MachineLearningModelTrainer:
             pickle.dump(self.model, f)
 
         # Log the train evaluation results 
-        # YOUR CODE GOES HERE
-        str_info = "Train Evaluation Results: {}: {}".format(self.target_metrics, train_eval_results)
+        str_info = "Train Evaluation Results {}: {}".format(self.target_metrics, train_eval_results)
         self.__logger.append(str_info)
         print(str_info)
 
@@ -211,10 +210,13 @@ class MachineLearningModelTrainer:
             eval_results = self.predict_and_evaluate(validate_dataloader)
 
             # Log the validation evaluation results
-            str_info = "->>> Validation Evaluation Results: {}: {}".format(self.target_metrics, eval_results)
+            str_info = "->>> Validation Evaluation Results {}: {}".format(self.target_metrics, eval_results)
             self.__logger.append(str_info)
             print(str_info)
 
+        splitter = "-----------------------------------------------------------------------------------------"
+        self.__logger.append(splitter)
+        print(str_info)
 
 
     def predict(self, dataloader: EmbeddingDataLoader):
