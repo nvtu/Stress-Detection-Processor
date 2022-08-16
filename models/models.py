@@ -142,8 +142,18 @@ class MLModel:
     def get_classifier(self):
         clf = None 
         if self.method == 'random_forest':
-            clf = RandomForestClassifier(n_estimators = 250, random_state = self.random_state, n_jobs = -1, max_features='sqrt', max_depth=8, min_samples_split=2, min_samples_leaf=4,
-                                oob_score=True, bootstrap=True, class_weight = 'balanced', )
+            clf = RandomForestClassifier(
+                n_estimators = 250, 
+                random_state = self.random_state, 
+                n_jobs = -1, 
+                max_features='sqrt', 
+                max_depth=4, 
+                min_samples_split=8, 
+                min_samples_leaf=16,
+                oob_score=True, 
+                bootstrap=True, 
+                class_weight = 'balanced'
+            )
         elif self.method == 'logistic_regression':
             clf = LogisticRegression(random_state = self.random_state)
         elif self.method == 'svm':
@@ -151,8 +161,8 @@ class MLModel:
         elif self.method == 'knn':
             clf = KNeighborsClassifier(n_jobs = -1, weights = 'distance')
         elif self.method == 'Voting3CLF':
-            estimators = [('rf', self.get_classifier('random_forest')), 
-                ('svm', self.get_classifier('svm')),
-                ('knn', self.get_classifier('knn'))]
+            estimators = [('rf', MLModel('random_forest', random_state = self.random_state).get_classifier()), 
+                ('svm', MLModel('svm', random_state = self.random_state).get_classifier()),
+                ('knn', MLModel('knn', random_state = self.random_state).get_classifier())]
             clf = VotingClassifier(estimators = estimators, n_jobs = -1, verbose = True)
         return clf

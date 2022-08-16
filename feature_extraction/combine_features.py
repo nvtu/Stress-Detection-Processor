@@ -1,11 +1,6 @@
 import os
 import sys
-
-data_lib = os.path.abspath('../data_processing')
-if data_lib not in sys.path:
-    sys.path.append(data_lib)
-
-
+import __init__
 import argparse
 import numpy as np
 from datapath_manager import DataPathManager, create_folder
@@ -75,7 +70,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset_name", type=str)
     parser.add_argument("--window_shift", type=float, default=0.25)
-    parser.add_argument("--window_size", type=float, default=60)
+    parser.add_argument("--window_size", type=int, default=60)
     parser.add_argument("--user_id", type=str, default=None)
 
     args = parser.parse_args()

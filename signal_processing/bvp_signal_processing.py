@@ -63,7 +63,7 @@ class BVP_Signal_Processor:
                 **kwargs
             )
             return rri, sampling_rate
-
+    
 
     def _hrv_sanitize_input(self, peaks=None):
 
@@ -194,7 +194,11 @@ class BVP_Signal_Processor:
         rri = self.extract_rr_intervals(bvp, sampling_rate)
         interpolated_rr_intervals, interpolated_nn_intervals = self.clean_rr_intervals(rri)
         time_domain_features = get_time_domain_features(interpolated_nn_intervals)
-        frequency_domain_features = get_frequency_domain_features(interpolated_nn_intervals, sampling_frequency = sampling_rate, method = 'welch')
+        try:
+            frequency_domain_features = get_frequency_domain_features(interpolated_nn_intervals, sampling_frequency = sampling_rate, method = 'welch')
+        except:
+            print(interpolated_nn_intervals)
+            raise
         geometrical_features = get_geometrical_features(interpolated_nn_intervals)
         pointcare_features = get_poincare_plot_features(interpolated_nn_intervals)
 

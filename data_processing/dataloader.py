@@ -66,10 +66,12 @@ class DatasetLoader:
             ...
         }
         """
+        DEFAULT_FIELD = 'eda' # Default field to get the user ids in the dataset
+
         ds_data_path = self.dp_manager.processed_dataset_path
         ds_data = pickle.load(open(ds_data_path, 'rb'))
         if gen_user_data_structure:
-            user_ids = ds_data['eda'].keys()
+            user_ids = ds_data[DEFAULT_FIELD].keys()
             self.__generate_user_data_structure(user_ids)
         return ds_data
 

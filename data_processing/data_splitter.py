@@ -86,9 +86,9 @@ class DataSplitter:
             train_indices = []
             test_indices = []
             for _, split_index in LeaveOneGroupOut().split(y, y=None, groups=y):
-                train_index = int(len(split_index) * test_size)
-                train_indices += split_index[:train_index]
-                test_indices += split_index[train_index:]
+                train_index = int(len(split_index) * (1 - test_size))
+                train_indices += split_index[:train_index].tolist()
+                test_indices += split_index[train_index:].tolist()
             return train_indices, test_indices
         
         indices = []
@@ -102,6 +102,7 @@ class DataSplitter:
 
             train_indices, test_indices = split_train_test(user_ground_truth)
             indices.append((train_indices, test_indices, test_index))
+        return indices
 
 
     def __split_data_independent(self):

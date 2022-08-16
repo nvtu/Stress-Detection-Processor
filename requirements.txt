@@ -1,2 +1,5 @@
 neurokit2
-hrvanalysis
+hrv-analysis
+PyWavelets
+cvxopt
+tqdm

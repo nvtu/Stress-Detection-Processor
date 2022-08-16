@@ -1,13 +1,7 @@
 import sys
 import os
+import __init__
 
-
-data_lib = os.path.abspath('../data_processing')
-signal_processing_lib = os.path.abspath('../signal_processing')
-if data_lib not in sys.path:
-    sys.path.append(data_lib)
-if signal_processing_lib not in sys.path:
-    sys.path.append(signal_processing_lib)
 
 import argparse
 from tqdm import tqdm
@@ -118,7 +112,7 @@ if __name__ == '__main__':
     parser.add_argument("signal", type=str)
     parser.add_argument("--user_id", type=str, default=None)
     parser.add_argument("--window_shift", type=float, default=0.25)
-    parser.add_argument("--window_size", type=float, default=60)
+    parser.add_argument("--window_size", type=int, default=60)
 
     args = parser.parse_args()
 

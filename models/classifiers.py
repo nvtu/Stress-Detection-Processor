@@ -54,7 +54,7 @@ class BinaryStressClassifier:
             # Generate the directories to save models and log results
             saved_model_path = ds_path_manager.get_saved_model_path(target_user, self.strategy, self.model_type, self.window_size, self.window_shift)
 
-            if self.strategy in ['knn', 'random_forest', 'svm']:
+            if self.strategy in ['knn', 'random_forest', 'svm', 'logistic_regression', 'Voting3CLF']:
 
                 # Create the model for training
                 model = MachineLearningModelTrainer(self.strategy, saved_log_path, saved_model_path, self.target_metrics,

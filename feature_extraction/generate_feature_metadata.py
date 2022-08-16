@@ -1,15 +1,7 @@
 import os
 from sqlite3 import DatabaseError
 import sys
-
-parent_dir = os.path.abspath('..')
-data_lib = os.path.abspath('../data_processing')
-if data_lib not in sys.path:
-    sys.path.append(data_lib)
-if parent_dir not in sys.path:
-    sys.path.append(parent_dir)
-
-
+import __init__
 import argparse
 from datapath_manager import DataPathManager
 from dataloader import DatasetLoader
@@ -95,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument("dataset_name", type=str)
     parser.add_argument("--user_id", type=str, default=None)
     parser.add_argument("--window_shift", type=float, default=0.25)
-    parser.add_argument("--window_size", type=float, default=60)
+    parser.add_argument("--window_size", type=int, default=60)
 
     args = parser.parse_args()
 

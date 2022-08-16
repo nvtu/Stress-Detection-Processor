@@ -216,7 +216,7 @@ class MachineLearningModelTrainer:
 
         splitter = "-----------------------------------------------------------------------------------------"
         self.__logger.append(splitter)
-        print(str_info)
+        print(splitter)
 
 
     def predict(self, dataloader: EmbeddingDataLoader):
