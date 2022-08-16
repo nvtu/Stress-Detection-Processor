@@ -32,9 +32,14 @@ class BinaryStressClassifier:
 
         ds_path_manager = DataPathManager(self.dataset_name)
         saved_log_path = ds_path_manager.get_log_path(self.strategy, self.model_type, self.window_size, self.window_shift)
+        result_path = ds_path_manager.get_evaluation_result_path(self.strategy, self.model_type, self.window_size, self.window_shift)
         
         logger = Logger(saved_log_path)
         logger.write(str_info)
+
+        result_logger = Logger(result_path)
+        result_info = 'User, ' + ', '.join(self.target_metrics)
+        result_logger.write(result_info)
 
         # Data splitter has already taken the responsibility to split the data according to the dependent/independent method
         ds_splitter = DataSplitter(self.dataset_name, self.model_type) 
@@ -61,6 +66,12 @@ class BinaryStressClassifier:
                     self.random_state)
 
                 # Train the model
-                model.train(train_embedding_dl, validate_embedding_dl)
+                eval_results = model.train(train_embedding_dl, validate_embedding_dl)
+
+                # Write the results to the result log file
+                if eval_results is not None:
+                    result_info = f'{target_user}, ' + ', '.join(map(str, eval_results))
+                    result_logger.append(result_info)
+
             elif self.strategy in ['branch_neural_network']:
                 model = BranchNeuralNetworkTrainer(self.strategy, self.random_state, self.window_shift, self.window_size)

@@ -162,6 +162,7 @@ class MachineLearningModelTrainer:
         self.__std_scaler = StandardScaler()
         self.__evaluator = Evaluator(self.target_metrics)
         self.__logger = Logger(save_log_path)
+
         if not os.path.exists(self.save_model_path):
             self.model = MLModel(method, random_state).get_classifier()
         else: 
@@ -213,10 +214,14 @@ class MachineLearningModelTrainer:
             str_info = "->>> Validation Evaluation Results {}: {}".format(self.target_metrics, eval_results)
             self.__logger.append(str_info)
             print(str_info)
+        else: eval_results = None
 
         splitter = "-----------------------------------------------------------------------------------------"
         self.__logger.append(splitter)
         print(splitter)
+        
+        return eval_results
+        
 
 
     def predict(self, dataloader: EmbeddingDataLoader):
