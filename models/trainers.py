@@ -18,10 +18,10 @@ class BranchNeuralNetworkTrainer:
     https://arxiv.org/abs/2203.09663
     """
 
-    def __init__(self, optimizer, loss_func, save_log_path: str, save_model_path: str, target_metrics: List[str], config_dict):
+    def __init__(self, save_log_path: str, save_model_path: str, target_metrics: List[str], config_dict):
         super(BranchNeuralNetworkTrainer, self).__init__()
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.model = BranchingNN(config_dict).to(self.device)
         # Check if the model has training checkpoint
@@ -29,8 +29,10 @@ class BranchNeuralNetworkTrainer:
             model_checkpoint = torch.load(save_model_path)
             self.model.load_state_dict(model_checkpoint['model_state_dict'])
 
-        self.optimizer = optimizer
-        self.loss_func = loss_func.to(self.device) if loss_func is not None else loss_func
+        params = list(filter(lambda p: p.requires_grad, self.model.parameters()))
+        self.optimizer = torch.optim.Adam(params, lr = config_dict['learning_rate'], weight_decay = 1e-3)
+        self.loss_func = nn.BCEWithLogitsLoss()
+
         self.save_log_path = save_log_path
         self.save_model_path = save_model_path # Directory where model files are saved
         self.target_metrics = target_metrics # The metrics to be used for evaluating the training process
@@ -38,6 +40,7 @@ class BranchNeuralNetworkTrainer:
         self.num_branches = config_dict['num_branches']
         self.__evalutator = Evaluator(self.target_metrics)
         self.__logger = Logger(self.save_log_path)
+
 
     
     def __infer(self, feats):
@@ -53,7 +56,10 @@ class BranchNeuralNetworkTrainer:
         y_true = []
 
         self.model.train() # Set model to training mode
-        for i, (feats, labels) in enumerate(dataloader.make_dataloader()):
+        for i, (feats, labels) in enumerate(dataloader.make_dataloader(
+                        batch_size = self.config_dict['batch_size'],
+                        is_train = True
+                    )):
 
             combined_logits, branch_logits = self.__infer(feats)
 
@@ -162,23 +168,24 @@ class MachineLearningModelTrainer:
         self.__std_scaler = StandardScaler()
         self.__evaluator = Evaluator(self.target_metrics)
         self.__logger = Logger(save_log_path)
+        self.__methods_need_scaler = ['svm', 'knn', 'logistic_regression', 'sgd', 'VotingCLF']
+        self.model = MLModel(method, random_state).get_classifier()
 
-        if not os.path.exists(self.save_model_path):
-            self.model = MLModel(method, random_state).get_classifier()
-        else: 
-            # Load the pre-trained model if it exists
-            with open(self.save_model_path, 'rb') as f:
-                self.model = pickle.load(f)
+        # if not os.path.exists(self.save_model_path):
+        #     self.model = MLModel(method, random_state).get_classifier()
+        # else: 
+        #     # Load the pre-trained model if it exists
+        #     self.model = pickle.load(open(self.save_model_path, 'rb'))
 
 
     def __fit_scaler(self, X: np.array):
-        if self.method in ['svm', 'knn', 'Voting3CLF']:
+        if self.method in self.__methods_need_scaler:
             self.__std_scaler.fit(X)
 
 
     def __transform_data(self, X):
         scaled_X = X
-        if self.method in ['svm', 'knn', 'Voting3CLF']:
+        if self.method in self.__methods_need_scaler:
             scaled_X = self.__std_scaler.transform(X)
         return scaled_X
 

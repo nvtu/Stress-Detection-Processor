@@ -19,8 +19,7 @@ if __name__ == '__main__':
     clf = BinaryStressClassifier(args.dataset_name, args.model_name, args.detector_type,
             window_shift = args.window_shift, 
             window_size = args.window_size)
-    clf.train()
-    # result_helper = ResultUtils(args.dataset_name)
-    # result_helper.dump_result_to_csv(results, columns=['user_id', 'accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1_score'])
-    # print('----------------------------------')   
-
+    if args.detector_type == 'independent':	
+        clf.train(independent_test_size = 0.2)
+    else:
+        clf.train()

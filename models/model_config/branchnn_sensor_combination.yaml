@@ -1,0 +1,7 @@
+num_branches: 3
+feature_dims: [30, 36, 6]
+activation_function: relu
+optimizer: adam
+dropout: 0.1
+learning_rate: 0.003
+batch_size: 2048

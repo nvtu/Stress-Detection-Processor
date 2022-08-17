@@ -1,12 +1,15 @@
 from functools import total_ordering
+from tkinter import W
+from turtle import back
 import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier, BaggingClassifier, GradientBoostingClassifier, ExtraTreesClassifier, AdaBoostClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
+from sklearn.linear_model import SGDClassifier
+from sklearn.svm import SVC, LinearSVC
 
 
 """
@@ -143,26 +146,87 @@ class MLModel:
         clf = None 
         if self.method == 'random_forest':
             clf = RandomForestClassifier(
-                n_estimators = 250, 
+                n_estimators = 500, 
                 random_state = self.random_state, 
                 n_jobs = -1, 
                 max_features='sqrt', 
-                max_depth=4, 
-                min_samples_split=8, 
-                min_samples_leaf=16,
+                max_depth=8, 
+                min_samples_split=2, 
+                min_samples_leaf=4,
                 oob_score=True, 
                 bootstrap=True, 
                 class_weight = 'balanced'
             )
         elif self.method == 'logistic_regression':
-            clf = LogisticRegression(random_state = self.random_state)
+            clf = LogisticRegression(
+                random_state = self.random_state,
+                class_weight = 'balanced',
+                n_jobs = -1,
+                solver = 'saga',
+                max_iter = 5000,
+            )
         elif self.method == 'svm':
-            clf = SVC(C = 10, random_state = self.random_state, class_weight = 'balanced')
+            clf = LinearSVC( 
+                    random_state = self.random_state, 
+                    class_weight = 'balanced',
+                    loss = 'hinge',
+                    verbose = 1,
+                    max_iter = 1000,
+                )
+        elif self.method == 'sgd':
+            clf = SGDClassifier(
+                loss = 'hinge',
+                n_jobs = -1,
+                learning_rate = 'constant',
+                class_weight = 'balanced',
+                average = True,
+                tol = 1e-4,
+                eta0 = 1e-4,
+                max_iter = 1000000,
+            )
         elif self.method == 'knn':
-            clf = KNeighborsClassifier(n_jobs = -1, weights = 'distance')
-        elif self.method == 'Voting3CLF':
+            clf = KNeighborsClassifier(
+                n_jobs = -1, 
+                weights = 'distance'
+            )
+        elif self.method == 'gradient_boosting':
+            clf = GradientBoostingClassifier(
+                n_estimators = 250,
+                max_features = 'sqrt',
+                min_samples_leaf = 4,
+                min_samples_split = 2,
+                random_state = self.random_state,
+                max_depth = 8,
+            )
+        elif self.method == 'extra_trees':
+            clf = ExtraTreesClassifier(
+                n_estimators = 250,
+                random_state = self.random_state, 
+                n_jobs = -1, 
+                max_features='sqrt', 
+                max_depth=8, 
+                min_samples_split=2, 
+                min_samples_leaf=4,
+                oob_score=True, 
+                bootstrap=True, 
+                class_weight = 'balanced'
+            )
+        elif self.method == 'ada':
+            clf = AdaBoostClassifier(
+                n_estimators = 250,
+                random_state = self.random_state,
+                learning_rate = 0.1,
+                base_estimator = MLModel('random_forest', random_state = self.random_state).get_classifier(),
+            )
+        elif self.method == 'VotingCLF':
             estimators = [('rf', MLModel('random_forest', random_state = self.random_state).get_classifier()), 
-                ('svm', MLModel('svm', random_state = self.random_state).get_classifier()),
-                ('knn', MLModel('knn', random_state = self.random_state).get_classifier())]
-            clf = VotingClassifier(estimators = estimators, n_jobs = -1, verbose = True)
+                    # ('knn', MLModel('knn', random_state = self.random_state).get_classifier()),
+                    ('logistic_regression', MLModel('logistic_regression', random_state = self.random_state).get_classifier()),
+                ]
+            weights = [1.5, 1]
+            clf = VotingClassifier(estimators = estimators, 
+                n_jobs = -1,
+                voting = 'soft', 
+                weights = weights,
+                verbose = True)
         return clf

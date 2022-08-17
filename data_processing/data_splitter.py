@@ -73,9 +73,7 @@ class DataSplitter:
         else: raise(ValueError('Invalid method for data splitter: {}'.format(self.method)))
 
 
-    def __split_data_dependent(self, test_size: float = 0.2):
-
-        def split_train_test(y):
+    def split_train_test(self, y, test_size: float = 0.2):
             """
             Split train and test data for subject-dependent model training:
                 - Train_data: (1 - test_size) * number of data of a class
@@ -90,7 +88,14 @@ class DataSplitter:
                 train_indices += split_index[:train_index].tolist()
                 test_indices += split_index[train_index:].tolist()
             return train_indices, test_indices
-        
+
+
+    def __split_data_dependent(self, test_size: float = 0.2):
+        """
+            Split data for subject-dependent model training:
+                - Train_data: (1 - test_size) * number of data of a class 
+                - Test_data: test_size * number of data of a class
+        """ 
         indices = []
         
         for _, test_index in LeaveOneGroupOut().split(self.dataset, self.ground_truth, self.groups):
@@ -100,7 +105,7 @@ class DataSplitter:
             if self.__validate_label_cnt(user_ground_truth) == False:
                 continue
 
-            train_indices, test_indices = split_train_test(user_ground_truth)
+            train_indices, test_indices = self.split_train_test(user_ground_truth, test_size)
             indices.append((train_indices, test_indices, test_index))
         return indices
 
@@ -126,6 +131,3 @@ class DataSplitter:
     def __validate_label_cnt(self, y):
         num_classes = len(np.unique(y))
         return num_classes > 1
-
-
-    

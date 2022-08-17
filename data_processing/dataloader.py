@@ -120,9 +120,9 @@ class EmbeddingDataLoader:
 
     def generate_batch(self, batch):
         feats, labels = zip(*batch)
-        print(feats, labels)
-        feats = torch.tensor(np.array([x for x in feats]).squeeze(1).float())
+        feats = torch.tensor(np.array([x for x in feats]))
         labels = torch.tensor(labels).float()
+        print(feats.is_cuda, labels.is_cuda) # Convert to cuda if necessary
         return feats, labels
 
 
