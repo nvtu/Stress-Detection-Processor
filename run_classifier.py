@@ -1,6 +1,8 @@
 import __init__
 from models.classifiers import BinaryStressClassifier
 import argparse
+import mlflow
+mlflow.set_tracking_uri('http://localhost:5010')
 
 
 parser = argparse.ArgumentParser()
@@ -19,7 +21,4 @@ if __name__ == '__main__':
     clf = BinaryStressClassifier(args.dataset_name, args.model_name, args.detector_type,
             window_shift = args.window_shift, 
             window_size = args.window_size)
-    if args.detector_type == 'independent':	
-        clf.train(independent_test_size = 0.2)
-    else:
-        clf.train()
+    clf.train(test_size = 0.3)

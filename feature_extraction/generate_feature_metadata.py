@@ -50,6 +50,7 @@ class MetadataGenerator():
         data_ground_truth = self.ds_data['ground_truth'][user_id]
         ground_truth = []
         group = []
+        tasks_indices = []
         for task_id, signal_data in self.ds_data[MetadataGenerator.DEFAULT_SIGNAL][user_id].items():
             len_signal = len(signal_data)
             step = int(args.window_shift * MetadataGenerator.DEVICE_MIN_SAMPLING_RATE)
@@ -60,12 +61,17 @@ class MetadataGenerator():
                 ground_truth += [data_ground_truth[task_id] for _ in range(first_iter, len_signal, step)]
             else: ground_truth += data_ground_truth[task_id] # In case the ground-truth is a list of continuous values, i.e AffectiveROAD
 
+            tasks_indices += [task_id for _ in range(first_iter, len_signal, step)] # The task_id is the same for all the windows in a user
+
         ground_truth = self.post_processing_ground_truth(ground_truth)
         ground_truth_path = os.path.join(self.ds_path_manager.user_data_paths[user_id].feature_path, f'{args.window_size}_{args.window_shift}', 'ground_truth.npy')
         group_path = os.path.join(self.ds_path_manager.user_data_paths[user_id].feature_path, f'{args.window_size}_{args.window_shift}', 'groups.npy')
+        tasks_index_path = os.path.join(self.ds_path_manager.user_data_paths[user_id].feature_path, f'{args.window_size}_{args.window_shift}', 'tasks_index.npy')
+
         np.save(ground_truth_path, ground_truth)
         np.save(group_path, group)
-        return ground_truth, group
+        np.save(tasks_index_path, tasks_indices)
+        return ground_truth, group, tasks_indices
 
 
     def extract_metadata_for_dataset(self):
@@ -74,14 +80,19 @@ class MetadataGenerator():
         # In another word, the sampling rate of the metadata should be the minimum samplinga rate of the wearable device
         ground_truth = []
         groups = []
+        tasks_indices = []
         for user_id, data in self.ds_data[MetadataGenerator.DEFAULT_SIGNAL].items():
-            gt, group = self.extract_metadata_for_user(str(user_id))
+            gt, group, user_tasks_indices = self.extract_metadata_for_user(str(user_id))
             ground_truth += gt 
             groups += group
+            tasks_indices += user_tasks_indices
         ground_truth_path = os.path.join(self.ds_path_manager.combined_stats_feature_path, f'{args.window_size}_{args.window_shift}', f'{args.dataset_name}_combined_ground_truth.npy')
         group_path = os.path.join(self.ds_path_manager.combined_stats_feature_path, f'{args.window_size}_{args.window_shift}', f'{args.dataset_name}_combined_groups.npy')
+        tasks_index_path = os.path.join(self.ds_path_manager.combined_stats_feature_path, f'{args.window_size}_{args.window_shift}', f'{args.dataset_name}_combined_tasks_index.npy')
+
         np.save(ground_truth_path, ground_truth)
         np.save(group_path, groups)
+        np.save(tasks_index_path, tasks_indices)
 
 
 if __name__ == '__main__':

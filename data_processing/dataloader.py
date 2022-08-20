@@ -84,10 +84,13 @@ class DatasetLoader:
         combined_stats_feature_path = os.path.join(combined_feature_folder, f'{self.dataset_name}_combined_features.npy')
         combined_group_path = os.path.join(combined_feature_folder, f'{self.dataset_name}_combined_groups.npy')
         combined_ground_truth_path = os.path.join(combined_feature_folder, f'{self.dataset_name}_combined_ground_truth.npy')
+        combined_tasks_indices_path = os.path.join(combined_feature_folder, f'{self.dataset_name}_combined_tasks_index.npy')
+
         dataset = np.load(combined_stats_feature_path)
         groups = np.load(combined_group_path)
         ground_truth = np.load(combined_ground_truth_path)
-        return dataset, ground_truth, groups
+        tasks_indices = np.load(combined_tasks_indices_path)
+        return dataset, ground_truth, groups, tasks_indices
 
 
 class EmbeddingDataSet(Dataset):

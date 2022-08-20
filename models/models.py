@@ -1,14 +1,13 @@
-from functools import total_ordering
-from tkinter import W
-from turtle import back
 import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier, BaggingClassifier, GradientBoostingClassifier, ExtraTreesClassifier, AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier, GradientBoostingClassifier, ExtraTreesClassifier, AdaBoostClassifier, StackingClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import SGDClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+import lightgbm as lgb
 from sklearn.svm import SVC, LinearSVC
 
 
@@ -217,6 +216,31 @@ class MLModel:
                 random_state = self.random_state,
                 learning_rate = 0.1,
                 base_estimator = MLModel('random_forest', random_state = self.random_state).get_classifier(),
+            )
+        elif self.method == 'lda':
+            clf = LinearDiscriminantAnalysis()
+        elif self.method == 'lgb':
+            clf = lgb.LGBMClassifier(
+                n_estimators = 500,
+                random_state = self.random_state,
+                class_weight = 'balanced',
+                objective = 'binary',
+                reg_alpha = 0.1,
+                learning_rate = 1e-2,
+                n_jobs = -1,
+                boosting_type = 'goss',
+            )
+        elif self.method == 'stack':
+            estimators = [('extra_trees', MLModel('extra_trees', random_state = self.random_state).get_classifier()), 
+                ('ada', MLModel('ada', random_state = self.random_state).get_classifier()),
+                ('gb', MLModel('gradient_boosting', random_state = self.random_state).get_classifier()),     
+            ]
+            clf = StackingClassifier(
+                estimators = estimators,
+                final_estimator = MLModel('random_forest', random_state = self.random_state).get_classifier(),
+                passthrough = True,
+                verbose = 1,
+                n_jobs = -1,
             )
         elif self.method == 'VotingCLF':
             estimators = [('rf', MLModel('random_forest', random_state = self.random_state).get_classifier()), 

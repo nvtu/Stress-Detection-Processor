@@ -160,22 +160,14 @@ class MachineLearningModelTrainer:
     """
 
 
-    def __init__(self, method, save_log_path: str, save_model_path: str, target_metrics: List[str], random_state: int = 0):
+    def __init__(self, method: str, target_metrics: List[str], random_state: int = 0):
         self.random_state = random_state
-        self.save_model_path = save_model_path
         self.target_metrics = target_metrics
         self.method = method
         self.__std_scaler = StandardScaler()
         self.__evaluator = Evaluator(self.target_metrics)
-        self.__logger = Logger(save_log_path)
         self.__methods_need_scaler = ['svm', 'knn', 'logistic_regression', 'sgd', 'VotingCLF']
         self.model = MLModel(method, random_state).get_classifier()
-
-        # if not os.path.exists(self.save_model_path):
-        #     self.model = MLModel(method, random_state).get_classifier()
-        # else: 
-        #     # Load the pre-trained model if it exists
-        #     self.model = pickle.load(open(self.save_model_path, 'rb'))
 
 
     def __fit_scaler(self, X: np.array):
@@ -204,13 +196,8 @@ class MachineLearningModelTrainer:
         y_preds = self.model.predict(X_train)
         train_eval_results = self.__evaluator.evaluate(y_train, y_preds)
 
-        # Save model
-        with open(self.save_model_path, 'wb') as f:
-            pickle.dump(self.model, f)
-
         # Log the train evaluation results 
-        str_info = "Train Evaluation Results {}: {}".format(self.target_metrics, train_eval_results)
-        self.__logger.append(str_info)
+        str_info = "Train Evaluation Results: {}".format(train_eval_results)
         print(str_info)
 
         # Validate the ML model is the validate data is available
@@ -218,13 +205,11 @@ class MachineLearningModelTrainer:
             eval_results = self.predict_and_evaluate(validate_dataloader)
 
             # Log the validation evaluation results
-            str_info = "->>> Validation Evaluation Results {}: {}".format(self.target_metrics, eval_results)
-            self.__logger.append(str_info)
+            str_info = "->>> Validation Evaluation Results: {}".format(eval_results)
             print(str_info)
         else: eval_results = None
 
         splitter = "-----------------------------------------------------------------------------------------"
-        self.__logger.append(splitter)
         print(splitter)
         
         return eval_results

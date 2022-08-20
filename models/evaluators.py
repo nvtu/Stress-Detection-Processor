@@ -30,8 +30,8 @@ class Evaluator:
 
 
     def evaluate(self, y_true, y_pred) -> List[float]:
-        scores = []
+        scores = {}
         for metrics in self.target_metrics:
             score = self.evaluate_on_metrics(y_true, y_pred, metrics)
-            scores.append(score)
+            scores[metrics] = score
         return scores
