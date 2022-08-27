@@ -20,10 +20,12 @@ class MetadataGenerator():
     DEVICE_MIN_SAMPLING_RATE = 4
 
 
-    def __init__(self, dataset_name: str, window_size: float, window_shift: float):
+    def __init__(self, dataset_name: str, window_size: int, window_shift: float, device_min_sampling_rate: int = None):
         self.dataset_name = dataset_name
         self.window_size = window_size
         self.window_shhift = window_shift
+        self.device_min_sampling_rate = device_min_sampling_rate if device_min_sampling_rate is not None \
+             else MetadataGenerator.DEVICE_MIN_SAMPLING_RATE
         self.ds_path_manager = DataPathManager(dataset_name).ds_path_manager
         self.ds_data = DatasetLoader(dataset_name).load_dataset_data()
         
@@ -31,9 +33,10 @@ class MetadataGenerator():
     def post_processing_ground_truth(self, ground_truth):
         ground_truth = np.array(ground_truth)
         if self.dataset_name == 'AffectiveROAD':
-            ground_truth[ground_truth == 0] = -1
-            ground_truth[ground_truth == 1] = 0
-            ground_truth[ground_truth == 2] = 1
+            return ground_truth.tolist()
+            # ground_truth[ground_truth == 0] = -1
+            # ground_truth[ground_truth < 2] = 0
+            # ground_truth[ground_truth == 2] = 1
         elif self.dataset_name == 'CognitiveDS':
             ground_truth[ground_truth < 1] = 0
             ground_truth[ground_truth > 0] = 1
@@ -53,13 +56,15 @@ class MetadataGenerator():
         tasks_indices = []
         for task_id, signal_data in self.ds_data[MetadataGenerator.DEFAULT_SIGNAL][user_id].items():
             len_signal = len(signal_data)
-            step = int(args.window_shift * MetadataGenerator.DEVICE_MIN_SAMPLING_RATE)
-            first_iter = int(args.window_size * MetadataGenerator.DEVICE_MIN_SAMPLING_RATE)
+            step = int(args.window_shift * self.device_min_sampling_rate)
+            first_iter = int(args.window_size * self.device_min_sampling_rate)
             group += [user_id for _ in range(first_iter, len_signal, step)]
 
             if type(data_ground_truth[task_id]) != list: # If the ground-truth is a single label
                 ground_truth += [data_ground_truth[task_id] for _ in range(first_iter, len_signal, step)]
-            else: ground_truth += data_ground_truth[task_id] # In case the ground-truth is a list of continuous values, i.e AffectiveROAD
+            else: 
+                # In case the ground-truth is a list of continuous values, i.e AffectiveROAD
+                ground_truth += [data_ground_truth[task_id][i] for i in range(first_iter, len_signal, step)] 
 
             tasks_indices += [task_id for _ in range(first_iter, len_signal, step)] # The task_id is the same for all the windows in a user
 
@@ -102,10 +107,13 @@ if __name__ == '__main__':
     parser.add_argument("--user_id", type=str, default=None)
     parser.add_argument("--window_shift", type=float, default=0.25)
     parser.add_argument("--window_size", type=int, default=60)
+    parser.add_argument('--device_min_sampling_rate', type=int, default=4, 
+        help="Min sampling rate of the recording device")
 
     args = parser.parse_args()
 
-    metadata_generator = MetadataGenerator(args.dataset_name, args.window_size, args.window_shift)
+    metadata_generator = MetadataGenerator(args.dataset_name, args.window_size, args.window_shift, 
+        device_min_sampling_rate = args.device_min_sampling_rate)
     if args.user_id is None:
         metadata_generator.extract_metadata_for_dataset()
     else:

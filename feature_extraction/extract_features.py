@@ -30,10 +30,13 @@ class StatisticalFeatureExtractor:
 
 
     def __get_sampling_rate(self):
-        if self.signal_type == 'eda' or self.signal_type == 'temp':
-            return 4
-        elif self.signal_type == 'bvp':
-            return 64
+        if self.dataset_name == 'WESAD_chest': # NOTE: Special case of WESAD_chest dataset where it is recorded using conventional clinical devices
+            return 700
+        else:
+            if self.signal_type == 'eda' or self.signal_type == 'temp':
+                return 4
+            elif self.signal_type == 'bvp':
+                return 64
         return None
 
 
