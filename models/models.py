@@ -48,7 +48,7 @@ class MLP(nn.Module):
     A Simple Neural Network (Multilayer-Perceptron)
     """
 
-    def __init__(self, input_size, dropout=0.4, embedding_size=[64], activation='relu'):
+    def __init__(self, input_size, dropout=None, embedding_size=[64], activation='relu'):
         super(MLP, self).__init__()
         modules = []
         modules.append(nn.Linear(input_size, embedding_size[0])) # Append the first layer
@@ -87,7 +87,7 @@ class BranchingNN(nn.Module):
     """
 
 
-    def __init__(self, config_dict):
+    def __init__(self, config_dict, device):
         super(BranchingNN, self).__init__()
 
         dropout = config_dict['dropout']
@@ -101,13 +101,13 @@ class BranchingNN(nn.Module):
         self.branches = []
         self.logits = []
         for i in range(self.num_branches):
-            embedded_feature = MLP(input_size=self.feature_dims[i], dropout=dropout, embedding_size=[self.feature_dims[i] * 2, self.feature_dims[i]], activation=activation_func) # Initialize the MLP for each branch
-            logit = MLP(input_size=self.feature_dims[i], dropout=dropout, embedding_size=[1], activation=activation_func)
+            embedded_feature = MLP(input_size=self.feature_dims[i], dropout=dropout, embedding_size=[self.feature_dims[i] * 2, self.feature_dims[i]], activation=activation_func).to(device) # Initialize the MLP for each branch
+            logit = MLP(input_size=self.feature_dims[i], dropout=dropout, embedding_size=[1], activation=activation_func).to(device)
             self.branches.append(embedded_feature)
             self.logits.append(logit)
         
         total_feature_dims = np.sum(self.feature_dims)
-        self.combined_nn = MLP(input_size=total_feature_dims, dropout=dropout, embedding_size=[total_feature_dims, 1], activation=activation_func)
+        self.combined_nn = MLP(input_size=total_feature_dims, dropout=dropout, embedding_size=[total_feature_dims, 1], activation=activation_func).to(device)
 
     
     def forward(self, x):
@@ -119,12 +119,16 @@ class BranchingNN(nn.Module):
         logits_cls = []
         prev_index = 0
         for i in range(self.num_branches):
-            feat = x[prev_index:self.feature_dims[i]]
+            next_index = prev_index + self.feature_dims[i]
+            feat = x[:, prev_index:next_index].float()
             embed = self.branches[i](feat)
-            cls = self.logits[i](embed)
-            logits_cls.append(cls)
+            _cls = self.logits[i](embed)
+            logits_cls.append(_cls)
             embedding_features.append(embed)
-            prev_index = self.feature_dims[i]
+            prev_index = next_index
+        # for i in range(self.num_branches):
+        #     _cls = self.logits[i](embedding_features[i])
+        #     logits_cls.append(_cls)
         combined_embedding_features = torch.cat(embedding_features, axis=-1)
         combined_logit = self.combined_nn(combined_embedding_features)
         return combined_logit, logits_cls
@@ -145,15 +149,15 @@ class MLModel:
         clf = None 
         if self.method == 'random_forest':
             clf = RandomForestClassifier(
-                n_estimators = 500, 
+                n_estimators = 250, 
                 random_state = self.random_state, 
                 n_jobs = -1, 
-                max_features='sqrt', 
-                max_depth=8, 
-                min_samples_split=2, 
-                min_samples_leaf=4,
-                oob_score=True, 
-                bootstrap=True, 
+                max_features = 'sqrt', 
+                max_depth = 8, 
+                min_samples_split = 2, 
+                min_samples_leaf = 4,
+                oob_score = True, 
+                bootstrap = True, 
                 class_weight = 'balanced'
             )
         elif self.method == 'logistic_regression':
@@ -165,12 +169,10 @@ class MLModel:
                 max_iter = 5000,
             )
         elif self.method == 'svm':
-            clf = LinearSVC( 
+            clf = SVC( 
                     random_state = self.random_state, 
                     class_weight = 'balanced',
-                    loss = 'hinge',
-                    verbose = 1,
-                    max_iter = 1000,
+                    # max_iter = 1000,
                 )
         elif self.method == 'sgd':
             clf = SGDClassifier(
@@ -199,15 +201,15 @@ class MLModel:
             )
         elif self.method == 'extra_trees':
             clf = ExtraTreesClassifier(
-                n_estimators = 250,
+                n_estimators = 500,
                 random_state = self.random_state, 
                 n_jobs = -1, 
-                max_features='sqrt', 
-                max_depth=8, 
-                min_samples_split=2, 
-                min_samples_leaf=4,
-                oob_score=True, 
-                bootstrap=True, 
+                max_features = 'sqrt', 
+                max_depth = 8, 
+                min_samples_split = 2, 
+                min_samples_leaf = 8,
+                oob_score = True, 
+                bootstrap = True, 
                 class_weight = 'balanced'
             )
         elif self.method == 'ada':
@@ -232,7 +234,7 @@ class MLModel:
             )
         elif self.method == 'stack':
             estimators = [('extra_trees', MLModel('extra_trees', random_state = self.random_state).get_classifier()), 
-                ('ada', MLModel('ada', random_state = self.random_state).get_classifier()),
+                ('lda', MLModel('lda', random_state = self.random_state).get_classifier()),
                 ('gb', MLModel('gradient_boosting', random_state = self.random_state).get_classifier()),     
             ]
             clf = StackingClassifier(
@@ -244,13 +246,13 @@ class MLModel:
             )
         elif self.method == 'VotingCLF':
             estimators = [('rf', MLModel('random_forest', random_state = self.random_state).get_classifier()), 
-                    # ('knn', MLModel('knn', random_state = self.random_state).get_classifier()),
+                    ('knn', MLModel('knn', random_state = self.random_state).get_classifier()),
                     ('logistic_regression', MLModel('logistic_regression', random_state = self.random_state).get_classifier()),
                 ]
-            weights = [1.5, 1]
+            # weights = [1.5, 1]
             clf = VotingClassifier(estimators = estimators, 
                 n_jobs = -1,
                 voting = 'soft', 
-                weights = weights,
+                # weights = weights,
                 verbose = True)
         return clf

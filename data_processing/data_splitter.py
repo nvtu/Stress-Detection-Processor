@@ -91,7 +91,7 @@ class DataSplitter:
         NOTE: This means that this approach of data splitting simulate the real-life situation 
         where the test data is the segment of data that is recorded later after we have the train data.
         """
-        cut_point = int(1 - len(indices) * test_size)
+        cut_point = int((1 - test_size) * len(indices))
         train_indices = indices[:cut_point].tolist()
         test_indices = indices[cut_point:].tolist()
         return train_indices, test_indices

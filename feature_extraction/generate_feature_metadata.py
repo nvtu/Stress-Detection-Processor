@@ -38,8 +38,8 @@ class MetadataGenerator():
             # ground_truth[ground_truth < 2] = 0
             # ground_truth[ground_truth == 2] = 1
         elif self.dataset_name == 'CognitiveDS':
-            ground_truth[ground_truth < 1] = 0
-            ground_truth[ground_truth > 0] = 1
+            ground_truth[ground_truth < 2] = 0
+            ground_truth[ground_truth > 1] = 1
         elif self.dataset_name == 'DCU_NVT_EXP2':
             ground_truth[ground_truth < 1] = 0
             ground_truth[ground_truth > 0] = 1

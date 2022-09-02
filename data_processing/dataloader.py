@@ -119,13 +119,12 @@ class EmbeddingDataLoader:
 
     def __init__(self, dataset, ground_truth):
         self.dataset = EmbeddingDataSet(dataset, ground_truth)
-
+        
 
     def generate_batch(self, batch):
         feats, labels = zip(*batch)
         feats = torch.tensor(np.array([x for x in feats]))
         labels = torch.tensor(labels).float()
-        print(feats.is_cuda, labels.is_cuda) # Convert to cuda if necessary
         return feats, labels
 
 

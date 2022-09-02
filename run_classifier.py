@@ -21,4 +21,4 @@ if __name__ == '__main__':
     clf = BinaryStressClassifier(args.dataset_name, args.model_name, args.detector_type,
             window_shift = args.window_shift, 
             window_size = args.window_size)
-    clf.train(test_size = 0.3)
+    clf.train(test_size = 0.2)

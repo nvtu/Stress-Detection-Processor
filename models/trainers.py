@@ -23,14 +23,16 @@ class BranchNeuralNetworkTrainer:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model = BranchingNN(config_dict).to(self.device)
-        # Check if the model has training checkpoint
-        if os.path.exists(save_model_path):
-            model_checkpoint = torch.load(save_model_path)
-            self.model.load_state_dict(model_checkpoint['model_state_dict'])
-
+        self.model = BranchingNN(config_dict, self.device).to(self.device)
         params = list(filter(lambda p: p.requires_grad, self.model.parameters()))
         self.optimizer = torch.optim.Adam(params, lr = config_dict['learning_rate'], weight_decay = 1e-3)
+        # Check if the model has training checkpoint
+        if os.path.exists(save_model_path):
+            print("LOAD PRETRAINED MODEL")
+            model_checkpoint = torch.load(save_model_path)
+            self.model.load_state_dict(model_checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
+
         self.loss_func = nn.BCEWithLogitsLoss()
 
         self.save_log_path = save_log_path
@@ -40,6 +42,7 @@ class BranchNeuralNetworkTrainer:
         self.num_branches = config_dict['num_branches']
         self.__evalutator = Evaluator(self.target_metrics)
         self.__logger = Logger(self.save_log_path)
+        self.__std_scaler = StandardScaler()
 
 
     
@@ -50,16 +53,15 @@ class BranchNeuralNetworkTrainer:
         return combined_logits, branch_logits
 
     
-    def train_epoch(self, dataloader: EmbeddingDataLoader, epoch_id: int = 1, step_print_result = 100) -> List[float]:
+    def train_epoch(self, dataloader: EmbeddingDataLoader, epoch_id: int = 1, step_print_result = 10) -> List[float]:
         train_loss = [] # List of training loss for each epoch
         y_pred = []
         y_true = []
 
         self.model.train() # Set model to training mode
-        for i, (feats, labels) in enumerate(dataloader.make_dataloader(
-                        batch_size = self.config_dict['batch_size'],
-                        is_train = True
-                    )):
+
+        dataloader = dataloader.make_dataloader(batch_size = self.config_dict['batch_size'], is_train = True)
+        for i, (feats, labels) in enumerate(dataloader):
 
             combined_logits, branch_logits = self.__infer(feats)
 
@@ -84,38 +86,48 @@ class BranchNeuralNetworkTrainer:
                 
                 train_loss.append(loss.item())
                 y_pred += combined_cls.round().squeeze().cpu().numpy().tolist()
-                y_true += labels
+                y_true += labels.squeeze().cpu().numpy().tolist()
 
             # Print the training metrics
             str_info = f'Epoch: {epoch_id}, Step: {i}, Loss: {loss.item()}'
-            if i % step_print_result == 0 or i == len(dataloader)-1:
+            if i % step_print_result == 0 or i == len(dataloader) - 1:
                 self.__logger.append(str_info) # Log the loss
-                print(str_info) 
+                # print(str_info) 
 
         # Evaluate the training metrics
         eval_results = self.__evalutator.evaluate(y_true, y_pred)
         
         # Log the epoch evaluation results
-        str_info = f'----> Epoch: {epoch_id}, Loss: {np.mean(train_loss)}, Evaluation: {self.target_metrics} -- {eval_results}'
+        str_info = f'----> Epoch: {epoch_id}, Loss: {np.mean(train_loss)}, Evaluation: {eval_results}'
         self.__logger.append(str_info)
-        print(str_info)
+        if epoch_id % step_print_result == 0 :
+            print(str_info)
 
+        eval_results = [val for _, val in eval_results.items()]
         return eval_results
 
 
-    def train(self, train_dataloader: EmbeddingDataLoader, validate_dataloader: EmbeddingDataLoader = None, num_epochs: int = 100):
-        MAX_LOSS_CHANGE_ITERATION = 10
+    def train(self, train_dataloader: EmbeddingDataLoader, validate_dataloader: EmbeddingDataLoader = None, num_epochs: int = 5000):
+        MAX_LOSS_CHANGE_ITERATION = num_epochs // 10 # Maximum number of epochs to change the learning rate
         EPS = 5e-3
+
+        # Scale the features before training
+        self.__std_scaler.fit(train_dataloader.dataset.dataset)
+        train_dataloader.dataset.dataset = self.__std_scaler.transform(train_dataloader.dataset.dataset)
+        if validate_dataloader is not None:
+            validate_dataloader.dataset.dataset = self.__std_scaler.transform(validate_dataloader.dataset.dataset)
+
 
         cnt_loss_change = 0 # Early stopping condition
         num_metrics = len(self.target_metrics)
         optimal_cost_value = num_metrics
         for epoch_id in range(num_epochs):
-            eval_metrics_results = self.train_epoch(train_dataloader, epoch_id)
-            if validate_dataloader is not None:
-                update_cost = num_metrics
-                pass
-            else: update_cost = num_metrics - sum(eval_metrics_results)
+            eval_metrics_results = self.train_epoch(train_dataloader, epoch_id, step_print_result = 10)
+            # if validate_dataloader is not None:
+            #     update_cost = num_metrics
+            #     pass
+            # else: update_cost = num_metrics - sum(eval_metrics_results)
+            update_cost = num_metrics - sum(eval_metrics_results)
 
             # Update the best model if the updated metrics is smaller than the best metrics
             if optimal_cost_value > update_cost + EPS:
@@ -123,21 +135,33 @@ class BranchNeuralNetworkTrainer:
                 saved_model = {
                     'epoch': epoch_id,
                     'model_state_dict': self.model.state_dict(),
+                    'optimizer_state_dict': self.optimizer.state_dict(),
                 }
                 torch.save(saved_model, f'{self.save_model_path}')
                 # Reset the early stopping condition
                 cnt_loss_change = 0
+                # print(epoch_id, optimal_cost_value, epoch_id, self.predict_and_evaluate(validate_dataloader))
             else: cnt_loss_change += 1
 
             # Early stopping condition
             if cnt_loss_change >= MAX_LOSS_CHANGE_ITERATION:
+                print('BREAK at epoch ', epoch_id)
                 break
+        
+
+        model_checkpoint = torch.load(self.save_model_path)
+        self.model.load_state_dict(model_checkpoint['model_state_dict'])
+        eval_results = self.predict_and_evaluate(validate_dataloader)
+        print("TRAINING", self.predict_and_evaluate(train_dataloader))
+        print('VALIDATING ', self.predict_and_evaluate(validate_dataloader))
+        return eval_results
 
         
     def predict(self, dataloader: EmbeddingDataLoader):
         predicts = []
         self.model.eval() # Set model to evaluation mode
         with torch.no_grad():
+            dataloader = dataloader.make_dataloader(batch_size = self.config_dict['batch_size'], is_train = False)
             for i, (feats, _) in enumerate(dataloader):
                 combined_logits, _ = self.__infer(feats)
                 sigmoid_function = nn.Sigmoid()
@@ -210,7 +234,6 @@ class MachineLearningModelTrainer:
         else: eval_results = None
 
         splitter = "-----------------------------------------------------------------------------------------"
-        print(splitter)
         
         return eval_results
         

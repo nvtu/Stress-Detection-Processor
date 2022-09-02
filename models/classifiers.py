@@ -40,7 +40,6 @@ class BinaryStressClassifier:
             'lgb',
         ]
 
-        ds_path_manager = DataPathManager(self.dataset_name)
         
         # log_path = ds_path_manager.get_log_path(self.strategy, self.model_type, self.window_size, self.window_shift)
         experiment = mlflow.get_experiment_by_name(self.dataset_name)
@@ -62,6 +61,8 @@ class BinaryStressClassifier:
             data = ds_splitter.next()
 
             X_train, y_train, X_test, y_test, target_user = data
+
+            # if target_user not in ['9', '20', '15' ]: continue
 
             str_info = "Evaluating the model for user: {}".format(target_user)
             print(str_info)
@@ -99,6 +100,24 @@ class BinaryStressClassifier:
                 )
                 config_dict = yaml.safe_load(open(config_path, 'r'))
 
-                self.trainer = BranchNeuralNetworkTrainer(saved_log_path, saved_model_path, self.target_metrics, config_dict)
+                ds_path_manager = DataPathManager(self.dataset_name)
+                saved_log_path = './logs.txt'
+                saved_model_path = ds_path_manager.get_saved_model_path(target_user, self.strategy, self.model_type, self.window_size, self.window_shift)
 
-                self.trainer.train(train_embedding_dl, validate_embedding_dl)
+                self.trainer = BranchNeuralNetworkTrainer(saved_log_path, saved_model_path, self.target_metrics[:2], config_dict)
+
+                # Train the model
+                # eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 1000)
+                with mlflow.start_run(experiment_id = self.experiment_id, 
+                    run_name = target_user,
+                ):
+                    eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 100)
+                    if eval_results is not None:
+                        params = {
+                            'strategy': self.strategy,
+                            'model_type': self.model_type,
+                            'user_id': target_user,
+                        }
+                        mlflow.log_params(params)
+                        mlflow.log_metrics(eval_results)
+
