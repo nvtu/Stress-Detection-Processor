@@ -62,7 +62,8 @@ class BinaryStressClassifier:
 
             X_train, y_train, X_test, y_test, target_user = data
 
-            # if target_user not in ['9', '20', '15' ]: continue
+            # if target_user not in ['nvtu']: continue
+            # if target_user not in ['9', '8', '3', '20']: continue
 
             str_info = "Evaluating the model for user: {}".format(target_user)
             print(str_info)
@@ -73,14 +74,16 @@ class BinaryStressClassifier:
             validate_embedding_dl = EmbeddingDataLoader(X_test, y_test)
 
             # Generate the directories to save models and log results
-            # saved_model_path = ds_path_manager.get_saved_model_path(target_user, self.strategy, self.model_type, self.window_size, self.window_shift)
+            ds_path_manager = DataPathManager(self.dataset_name)
+            saved_model_path = ds_path_manager.get_saved_model_path(target_user, self.strategy, self.model_type, self.window_size, self.window_shift)
 
             if self.strategy in self.__ml_methods:
 
                 # Create the model for training
-                self.trainer = MachineLearningModelTrainer(self.strategy, self.target_metrics, self.random_state)
+                self.trainer = MachineLearningModelTrainer(saved_model_path, self.strategy, self.target_metrics, self.random_state)
 
                 # Train the model
+                # eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl)
                 with mlflow.start_run(experiment_id = self.experiment_id, 
                     run_name = target_user,
                 ):
@@ -100,18 +103,16 @@ class BinaryStressClassifier:
                 )
                 config_dict = yaml.safe_load(open(config_path, 'r'))
 
-                ds_path_manager = DataPathManager(self.dataset_name)
                 saved_log_path = './logs.txt'
-                saved_model_path = ds_path_manager.get_saved_model_path(target_user, self.strategy, self.model_type, self.window_size, self.window_shift)
 
-                self.trainer = BranchNeuralNetworkTrainer(saved_log_path, saved_model_path, self.target_metrics[:2], config_dict)
+                self.trainer = BranchNeuralNetworkTrainer(saved_log_path, saved_model_path, config_dict, target_metrics = self.target_metrics[:4])
 
                 # Train the model
                 # eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 1000)
                 with mlflow.start_run(experiment_id = self.experiment_id, 
                     run_name = target_user,
                 ):
-                    eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 100)
+                    eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 1000)
                     if eval_results is not None:
                         params = {
                             'strategy': self.strategy,

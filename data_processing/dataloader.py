@@ -95,18 +95,21 @@ class DatasetLoader:
 
 class EmbeddingDataSet(Dataset):
 
-    def __init__(self, dataset, ground_truth):
+    def __init__(self, dataset, ground_truth, std_scaler = None):
         """
             - dataset: a numpy array of shape (num_samples, num_features)
             - ground_truth: a numpy array of shape (num_samples, )
         """
         self.dataset = dataset
         self.ground_truth = ground_truth
+        self.std_scaler = std_scaler
     
 
     def __getitem__(self, index):
         sample = self.dataset[index, :]
         label = self.ground_truth[index]
+        if self.std_scaler is not None:
+            sample = self.std_scaler.transform(sample)
         return sample, label
 
 
@@ -117,8 +120,8 @@ class EmbeddingDataSet(Dataset):
 class EmbeddingDataLoader:
 
 
-    def __init__(self, dataset, ground_truth):
-        self.dataset = EmbeddingDataSet(dataset, ground_truth)
+    def __init__(self, dataset, ground_truth, std_scaler = None):
+        self.dataset = EmbeddingDataSet(dataset, ground_truth, std_scaler = std_scaler)
         
 
     def generate_batch(self, batch):

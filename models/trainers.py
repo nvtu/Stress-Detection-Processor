@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import os
 import numpy as np
-import pickle
+import joblib
 from typing import List
 
 
@@ -18,7 +18,10 @@ class BranchNeuralNetworkTrainer:
     https://arxiv.org/abs/2203.09663
     """
 
-    def __init__(self, save_log_path: str, save_model_path: str, target_metrics: List[str], config_dict):
+    def __init__(self, save_log_path: str, save_model_path: str, 
+        config_dict,
+        target_metrics: List[str] = ['accuracy', 'precision', 'recall', 'f1_score', 'auc'],
+    ):
         super(BranchNeuralNetworkTrainer, self).__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -26,12 +29,14 @@ class BranchNeuralNetworkTrainer:
         self.model = BranchingNN(config_dict, self.device).to(self.device)
         params = list(filter(lambda p: p.requires_grad, self.model.parameters()))
         self.optimizer = torch.optim.Adam(params, lr = config_dict['learning_rate'], weight_decay = 1e-3)
+        self.__std_scaler = StandardScaler()
         # Check if the model has training checkpoint
         if os.path.exists(save_model_path):
             print("LOAD PRETRAINED MODEL")
             model_checkpoint = torch.load(save_model_path)
             self.model.load_state_dict(model_checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
+            self.__std_scaler = model_checkpoint['std_scaler']
 
         self.loss_func = nn.BCEWithLogitsLoss()
 
@@ -42,17 +47,18 @@ class BranchNeuralNetworkTrainer:
         self.num_branches = config_dict['num_branches']
         self.__evalutator = Evaluator(self.target_metrics)
         self.__logger = Logger(self.save_log_path)
-        self.__std_scaler = StandardScaler()
 
 
     
     def __infer(self, feats):
+        # print(self.model.training)
         # Covert all feature type to the training-device datatype
-        feats = feats.to(self.device)
-        combined_logits, branch_logits = self.model(feats)
+        transformed_feats = (feats - self.__std_scaler.mean_) / self.__std_scaler.scale_ 
+        transformed_feats = transformed_feats.to(self.device)
+        combined_logits, branch_logits = self.model(transformed_feats)
         return combined_logits, branch_logits
 
-    
+
     def train_epoch(self, dataloader: EmbeddingDataLoader, epoch_id: int = 1, step_print_result = 10) -> List[float]:
         train_loss = [] # List of training loss for each epoch
         y_pred = []
@@ -113,9 +119,9 @@ class BranchNeuralNetworkTrainer:
 
         # Scale the features before training
         self.__std_scaler.fit(train_dataloader.dataset.dataset)
-        train_dataloader.dataset.dataset = self.__std_scaler.transform(train_dataloader.dataset.dataset)
-        if validate_dataloader is not None:
-            validate_dataloader.dataset.dataset = self.__std_scaler.transform(validate_dataloader.dataset.dataset)
+
+        # if validate_dataloader is not None:
+        #     validate_dataloader.dataset.dataset = self.__std_scaler.transform(validate_dataloader.dataset.dataset)
 
 
         cnt_loss_change = 0 # Early stopping condition
@@ -136,6 +142,7 @@ class BranchNeuralNetworkTrainer:
                     'epoch': epoch_id,
                     'model_state_dict': self.model.state_dict(),
                     'optimizer_state_dict': self.optimizer.state_dict(),
+                    'std_scaler': self.__std_scaler,
                 }
                 torch.save(saved_model, f'{self.save_model_path}')
                 # Reset the early stopping condition
@@ -161,8 +168,8 @@ class BranchNeuralNetworkTrainer:
         predicts = []
         self.model.eval() # Set model to evaluation mode
         with torch.no_grad():
-            dataloader = dataloader.make_dataloader(batch_size = self.config_dict['batch_size'], is_train = False)
-            for i, (feats, _) in enumerate(dataloader):
+            _dataloader = dataloader.make_dataloader(batch_size = self.config_dict['batch_size'], is_train = False)
+            for i, (feats, _) in enumerate(_dataloader):
                 combined_logits, _ = self.__infer(feats)
                 sigmoid_function = nn.Sigmoid()
                 combined_cls = sigmoid_function(combined_logits)
@@ -184,14 +191,34 @@ class MachineLearningModelTrainer:
     """
 
 
-    def __init__(self, method: str, target_metrics: List[str], random_state: int = 0):
+    def __init__(self, saved_model_path: str, method: str, 
+        target_metrics: List[str] = ['accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1_score'],
+        random_state: int = 0, 
+        eval_mode: bool = False):
+        self.saved_model_path = saved_model_path
         self.random_state = random_state
         self.target_metrics = target_metrics
         self.method = method
-        self.__std_scaler = StandardScaler()
         self.__evaluator = Evaluator(self.target_metrics)
         self.__methods_need_scaler = ['svm', 'knn', 'logistic_regression', 'sgd', 'VotingCLF']
-        self.model = MLModel(method, random_state).get_classifier()
+        self.eval_mode = eval_mode
+        if eval_mode is True:
+            print("LOAD PRETRAINED MODEL")
+            self.model, self.__std_scaler = self.__load_model()
+            if self.__std_scaler is None:
+                self.__std_scaler = StandardScaler()
+        else:
+            self.model = MLModel(method, random_state).get_classifier()
+            self.__std_scaler = StandardScaler()
+
+
+
+    def __load_model(self):
+        data = joblib.load(self.saved_model_path)
+        model = data['model']
+        std_scaler = data['std_scaler'] if 'std_scaler' in data else None
+        return model, std_scaler
+
 
 
     def __fit_scaler(self, X: np.array):
@@ -207,6 +234,8 @@ class MachineLearningModelTrainer:
 
 
     def train(self, train_dataloader: EmbeddingDataLoader, validate_dataloader: EmbeddingDataLoader = None, **args):
+        assert(self.eval_mode is False)
+        
         X_train, y_train = train_dataloader.dataset.dataset, train_dataloader.dataset.ground_truth
 
         # Re-scaled the data so that the input is valid for some ML models training such as SVM, KNN, etc.
@@ -215,6 +244,18 @@ class MachineLearningModelTrainer:
 
         # Train the ML model
         self.model.fit(X_train, y_train)
+        
+        # Save the model
+        if self.method in self.__methods_need_scaler:
+            data = {
+                'model': self.model,
+                'std_scaler': self.__std_scaler
+            }
+        else:
+            data = {
+                'model': self.model
+            }
+        joblib.dump(data, self.saved_model_path)
 
         # Evaluate the model with training metrics
         y_preds = self.model.predict(X_train)

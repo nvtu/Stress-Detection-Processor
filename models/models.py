@@ -98,8 +98,8 @@ class BranchingNN(nn.Module):
         assert(type(self.feature_dims) == list) # Assert that the feature_dims is a list
         assert(len(self.feature_dims) == self.num_branches) # Assert that the number of feature dimensions is the same as the number of branches
 
-        self.branches = []
-        self.logits = []
+        self.branches = nn.ModuleList([])
+        self.logits = nn.ModuleList([])
         for i in range(self.num_branches):
             embedded_feature = MLP(input_size=self.feature_dims[i], dropout=dropout, embedding_size=[self.feature_dims[i] * 2, self.feature_dims[i]], activation=activation_func).to(device) # Initialize the MLP for each branch
             logit = MLP(input_size=self.feature_dims[i], dropout=dropout, embedding_size=[1], activation=activation_func).to(device)
@@ -126,9 +126,7 @@ class BranchingNN(nn.Module):
             logits_cls.append(_cls)
             embedding_features.append(embed)
             prev_index = next_index
-        # for i in range(self.num_branches):
-        #     _cls = self.logits[i](embedding_features[i])
-        #     logits_cls.append(_cls)
+        
         combined_embedding_features = torch.cat(embedding_features, axis=-1)
         combined_logit = self.combined_nn(combined_embedding_features)
         return combined_logit, logits_cls
@@ -245,9 +243,10 @@ class MLModel:
                 n_jobs = -1,
             )
         elif self.method == 'VotingCLF':
-            estimators = [('rf', MLModel('random_forest', random_state = self.random_state).get_classifier()), 
+            estimators = [('et', MLModel('extra_trees', random_state = self.random_state).get_classifier()), 
                     ('knn', MLModel('knn', random_state = self.random_state).get_classifier()),
                     ('logistic_regression', MLModel('logistic_regression', random_state = self.random_state).get_classifier()),
+                    ('lda', MLModel('lda', random_state = self.random_state).get_classifier()),
                 ]
             # weights = [1.5, 1]
             clf = VotingClassifier(estimators = estimators, 

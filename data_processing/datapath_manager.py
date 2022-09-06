@@ -91,7 +91,7 @@ class DataPathManager:
         """
         folder_path = os.path.join(self.ds_path_manager.model_folder_path, f'{window_size}_{window_shift}', model_type, model_name)
         create_folder(folder_path)
-        extension = 'pkl' if model_name in ['svm', 'random_forest', 'knn'] else 'pth'
+        extension = 'joblib' if model_name in ['svm', 'random_forest', 'knn', 'extra_trees'] else 'pth'
         model_path = os.path.join(folder_path, f'{user_id}_{model_name}_{model_type}_{window_size}_{window_shift}.{extension}')
         return model_path
 
@@ -157,4 +157,19 @@ class DataPathManager:
 
 
 
+class ITWDataPathManager:
+
+    def __init__(self, dataset_name: str):
+        self.dataset_name = dataset_name
+
+
+    def get_dataset_path(self):
+        """
+        Get data path of the dataset
+        """
+        config_file_path = str(Path(__file__).parent.parent / 'config.ini')
+        config = configparser.ConfigParser()
+        config.read(config_file_path)
+        dataset_path = config['DATA_PATH'][self.dataset_name]
+        return dataset_path
 
