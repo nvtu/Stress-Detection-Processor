@@ -64,6 +64,14 @@ class ITWFeatureCombiner:
             combined_features.append(features)
 
         combined_features = np.vstack(combined_features)
+
+        # Filter the NaN features
+        user_date_path = os.path.dirname(user_feature_path)
+        removed_indices = list(map(int, [line.strip() for line in open(os.path.join(user_date_path, 'itw_logs.txt'), 'r').readlines()]))
+        mask = np.ones(combined_features.shape[0], dtype=bool)
+        mask[removed_indices] = False
+        combined_features = combined_features[mask, :]
+
         output_file_path = os.path.join(user_combined_feature_path, 'bvp_eda_temp.npy')  
         np.save(output_file_path, combined_features)
 

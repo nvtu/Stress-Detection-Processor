@@ -13,4 +13,5 @@ class TEMP_Signal_Processor:
         res = linregress(t, temp)
         temp_slope = res.slope
         features = [mean_temp, std_temp, min_temp, max_temp, range_temp, temp_slope]
+        # features = [range_temp, temp_slope]
         return features

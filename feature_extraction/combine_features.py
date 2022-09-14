@@ -34,6 +34,8 @@ class FeatureCombiner:
         output_file_path = os.path.join(output_folder_path, f'{self.dataset_name}_combined_features.npy')
         features = None
         for i, path in enumerate(features_path):
+            # if 'eda' in path:
+            #     continue
             if i == 0:
                 features = np.load(path)
             else:

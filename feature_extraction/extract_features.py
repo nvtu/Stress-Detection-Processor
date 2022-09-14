@@ -13,6 +13,7 @@ from dataloader import DatasetLoader
 from datapath_manager import create_folder, DataPathManager
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
+import neurokit2 as nk
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -45,6 +46,7 @@ class StatisticalFeatureExtractor:
         if self.signal_type == 'eda':
             swt_denoiser = SWT_Threshold_Denoiser()
             cleaned_signal = swt_denoiser.denoise(signal)
+            # cleaned_signal = nk.standardize(cleaned_signal)
             cleaned_signal = MinMaxScaler().fit_transform(cleaned_signal.reshape(-1, 1)).ravel()
         elif self.signal_type == 'bvp':
             bvp_processor = BVP_Signal_Processor()

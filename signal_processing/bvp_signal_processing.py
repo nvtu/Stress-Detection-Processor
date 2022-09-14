@@ -153,7 +153,8 @@ class BVP_Signal_Processor:
 
 
     def clean_bvp(self, bvp, sampling_rate):
-        cleaned_bvp = self.winsorization(bvp)
+        # cleaned_bvp = self.winsorization(bvp)
+        cleaned_bvp = bvp.copy()
         cleaned_bvp = self.butter_baseline_drift_removal(cleaned_bvp, sampling_rate=sampling_rate)
 
         return cleaned_bvp
@@ -174,6 +175,7 @@ class BVP_Signal_Processor:
         
         # This replace ectopic beats nan values with linear interpolation
         interpolated_nn_intervals = interpolate_nan_values(rr_intervals=nn_intervals_list)
+
         return np.array(interpolated_rr_intervals), interpolated_nn_intervals
 
 
@@ -194,11 +196,9 @@ class BVP_Signal_Processor:
         rri = self.extract_rr_intervals(bvp, sampling_rate)
         interpolated_rr_intervals, interpolated_nn_intervals = self.clean_rr_intervals(rri)
         time_domain_features = get_time_domain_features(interpolated_nn_intervals)
-        try:
-            frequency_domain_features = get_frequency_domain_features(interpolated_nn_intervals, sampling_frequency = sampling_rate, method = 'welch')
-        except:
-            print(interpolated_nn_intervals)
-            raise
+
+        frequency_domain_features = get_frequency_domain_features(interpolated_nn_intervals, sampling_frequency = sampling_rate, method = 'welch')
+
         geometrical_features = get_geometrical_features(interpolated_nn_intervals)
         pointcare_features = get_poincare_plot_features(interpolated_nn_intervals)
 

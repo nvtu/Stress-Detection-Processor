@@ -63,7 +63,16 @@ class ITWMetadataGenerator:
             dt_metadata = [(item, get_date_time_from_float(item)) for item in dt_metadata]
             metadata.append(dt_metadata)
 
-        metadata = list(itertools.chain(*metadata))
+        metadata = np.array(list(itertools.chain(*metadata)))
+        print(metadata)
+
+        # Filter the NaN features
+        user_date_path = os.path.dirname(user_feature_path)
+        removed_indices = list(map(int, [line.strip() for line in open(os.path.join(user_date_path, 'itw_logs.txt'), 'r').readlines()]))
+        mask = np.ones(len(metadata), dtype=bool)
+        mask[removed_indices] = False
+        metadata = metadata[mask, :]
+
         df_metadata = pd.DataFrame(metadata, columns=['date_time', 'date_time_str'])
         output_file_path = os.path.join(user_combined_feature_path, 'metadata.csv')  
         df_metadata.to_csv(output_file_path, index=False)
@@ -73,6 +82,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('dataset_name', type=str)
     parser.add_argument('--user_id', type=str, default=None)
+    parser.add_argument('--window_size', type=int, default=60)
     parser.add_argument('date', type=str, default=None)
 
     args = parser.parse_args()
@@ -80,6 +90,6 @@ if __name__ == '__main__':
     assert(args.user_id is not None)
     assert(args.date is not None)
 
-    metadata_generator = ITWMetadataGenerator(args.dataset_name)
+    metadata_generator = ITWMetadataGenerator(args.dataset_name, window_size = args.window_size)
 
     metadata_generator.generate_metadata(args.user_id, args.date)

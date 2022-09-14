@@ -1,4 +1,5 @@
 import configparser
+from importlib.metadata import metadata
 from tkinter import W
 from typing import Dict
 from dataclasses import dataclass
@@ -172,4 +173,69 @@ class ITWDataPathManager:
         config.read(config_file_path)
         dataset_path = config['DATA_PATH'][self.dataset_name]
         return dataset_path
+
+
+    def get_data_path(self):
+        """
+        Get data path of the dataset
+        """
+        dataset_path = self.get_dataset_path()
+        data_path = os.path.join(dataset_path, 'data')
+        return data_path
+
+
+    def get_feature_path(self, user_id: str):
+        """
+        Get feature path of the dataset
+        """
+        dataset_path = self.get_dataset_path()
+        feature_path = os.path.join(dataset_path, 'features', user_id)
+        return feature_path
+
+    
+    def get_user_path(self, user_id: str):
+        """
+        Get user path of a user
+        """
+        dataset_path = self.get_data_path()
+        user_path = os.path.join(dataset_path, user_id)
+        return user_path
+    
+
+    def get_feature_path_by_date(self, user_id: str, date: str):
+        """
+        Get feature path of a user by date
+        """
+        feature_path = self.get_feature_path(user_id)
+        feature_path = os.path.join(feature_path, date)
+        return feature_path
+
+
+    def get_feature_file_path_by_date(self, user_id: str, date: str):
+        """
+        Get feature path of a user by date
+        """
+        feature_path = self.get_feature_path_by_date(user_id, date)
+        feat_path = os.path.join(feature_path, 'bvp_eda_temp.npy')
+        metadata_path = os.path.join(feature_path, 'metadata.csv')
+        return feat_path, metadata_path
+
+    
+    def get_session_path(self, user_id: str, date: str, session_id: str):
+        """
+        Get feature path of a user by session
+        """
+        user_feature_path = self.get_data_by_date_path(user_id, date)
+        feat_path = os.path.join(user_feature_path, session_id)
+        return feat_path
+
+
+    def get_data_by_date_path(self, user_id: str, date: str):
+        """
+        Get user data by date path of a user
+        """
+        user_path = self.get_user_path(user_id)
+        user_data_by_date_path = os.path.join(user_path, date)
+        return user_data_by_date_path
+
 

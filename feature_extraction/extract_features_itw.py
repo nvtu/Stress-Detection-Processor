@@ -70,12 +70,18 @@ class ITWStatisticalFeatureExtractor:
         first_iter = int(self.window_size * self.sampling_rate)
         len_signal = len(signal)
         step = int(self.window_shift * self.sampling_rate)
+        index = -1
         for current_iter in tqdm(range(first_iter, len_signal, step)):
-            previous_iter = current_iter - first_iter
-            current_signal = signal[previous_iter:current_iter]
-            cleaned_signal = self.clean_signal(current_signal)
-            stats_feature = self.extract_statistical_feature(cleaned_signal)
-            features.append(stats_feature)
+            try:
+                index += 1
+                previous_iter = current_iter - first_iter
+                current_signal = signal[previous_iter:current_iter]
+                cleaned_signal = self.clean_signal(current_signal)
+                stats_feature = self.extract_statistical_feature(cleaned_signal)
+                features.append(stats_feature)
+            except Exception as e:
+                with open('itw_logs.txt', 'a') as f:
+                    print(index, file=f)
         return features
     
 

@@ -7,7 +7,7 @@ class Evaluator:
     Helper for evaluating the performance of a model on a dataset using a set of metrics
     """
 
-    def __init__(self, target_metrics: List[str] = ['accuracy', 'auc', 'balanced_accuracy', 'precision', 'recall', 'f1']):
+    def __init__(self, target_metrics: List[str] = ['accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1']):
         self.target_metrics = target_metrics
 
 

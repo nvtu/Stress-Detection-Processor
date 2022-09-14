@@ -83,19 +83,19 @@ class BinaryStressClassifier:
                 self.trainer = MachineLearningModelTrainer(saved_model_path, self.strategy, self.target_metrics, self.random_state)
 
                 # Train the model
-                # eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl)
-                with mlflow.start_run(experiment_id = self.experiment_id, 
-                    run_name = target_user,
-                ):
-                    eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl)
-                    if eval_results is not None:
-                        params = {
-                            'strategy': self.strategy,
-                            'model_type': self.model_type,
-                            'user_id': target_user,
-                        }
-                        mlflow.log_params(params)
-                        mlflow.log_metrics(eval_results)
+                eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl)
+                # with mlflow.start_run(experiment_id = self.experiment_id, 
+                #     run_name = target_user,
+                # ):
+                #     eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl)
+                #     if eval_results is not None:
+                #         params = {
+                #             'strategy': self.strategy,
+                #             'model_type': self.model_type,
+                #             'user_id': target_user,
+                #         }
+                #         mlflow.log_params(params)
+                #         mlflow.log_metrics(eval_results)
 
             elif self.strategy in ['branch_neural_network']:
 
@@ -108,17 +108,17 @@ class BinaryStressClassifier:
                 self.trainer = BranchNeuralNetworkTrainer(saved_log_path, saved_model_path, config_dict, target_metrics = self.target_metrics[:4])
 
                 # Train the model
-                # eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 1000)
-                with mlflow.start_run(experiment_id = self.experiment_id, 
-                    run_name = target_user,
-                ):
-                    eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 1000)
-                    if eval_results is not None:
-                        params = {
-                            'strategy': self.strategy,
-                            'model_type': self.model_type,
-                            'user_id': target_user,
-                        }
-                        mlflow.log_params(params)
-                        mlflow.log_metrics(eval_results)
+                eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 1000)
+                # with mlflow.start_run(experiment_id = self.experiment_id, 
+                #     run_name = target_user,
+                # ):
+                #     eval_results = self.trainer.train(train_embedding_dl, validate_embedding_dl, num_epochs = 1000)
+                #     if eval_results is not None:
+                #         params = {
+                #             'strategy': self.strategy,
+                #             'model_type': self.model_type,
+                #             'user_id': target_user,
+                #         }
+                #         mlflow.log_params(params)
+                #         mlflow.log_metrics(eval_results)
 

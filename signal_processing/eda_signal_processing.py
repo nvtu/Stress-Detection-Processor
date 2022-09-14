@@ -182,8 +182,8 @@ class EDA_Signal_Processor:
 
         statistics_feat = np.array([
                 mean_scl, std_scl, std_scr, scr_range, corr, eda_slope, 
-                sum_scr_response_duration, sum_scr_amplitude, area_of_response_curve,
-                num_scr_peaks, mean_eda, std_eda, min_eda, max_eda, eda_dynamic_range,
+                sum_scr_response_duration, sum_scr_amplitude, area_of_response_curve, num_scr_peaks, 
+                mean_eda, std_eda, min_eda, max_eda, eda_dynamic_range,
                 mean_scr, max_scr, min_scr, kurtosis_scr, skewness_scr, mean_first_grad, std_first_grad, mean_second_grad, std_second_grad, 
                 mean_peaks, max_peaks, min_peaks, std_peaks, mean_onsets, max_onsets, min_onsets, std_onsets,
                 ALSC, INSC, APSC, RMSC])
