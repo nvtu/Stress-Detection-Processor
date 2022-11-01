@@ -1,5 +1,5 @@
-# num_branches: 1
-# feature_dims: [6]
+num_branches: 2
+feature_dims: [30, 6]
 # num_branches: 1
 # feature_dims: [30]
 # num_branches: 2
@@ -8,12 +8,10 @@
 # feature_dims: [36, 6]
 # num_branches: 2
 # feature_dims: [30, 6]
-num_branches: 3
-feature_dims: [30, 36, 6]
+# num_branches: 3
+# feature_dims: [30, 36, 6]
 activation_function: relu
 optimizer: adam
-dropout: 0.1
-# dropout: 0.3
-learning_rate: 0.005
-# learning_rate: 0.005
+dropout: 0.2
+learning_rate: 0.0003
 batch_size: 2048

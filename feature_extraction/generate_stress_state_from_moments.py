@@ -1,3 +1,4 @@
+from re import S
 from tkinter import W
 import __init__
 import os
@@ -33,33 +34,33 @@ class GenerateStressStateFromMoments:
         chrono_moments = sorted(list(zip(moments, labels)), key=lambda x: x[0]) # Assume that the name of the moments is in chronological order
         num_moments = len(chrono_moments)
         
-        WINDOW_LAG = 10 # Lagging in 10 seconds for uncontinuous stress & non-stress moments
+        WINDOW_LAG = 5 # Lagging in 10 seconds for uncontinuous stress & non-stress moments
         state_labels = []
         for i in range(1, num_moments):
             moment, label = chrono_moments[i]
             prev_moment, prev_label = chrono_moments[i-1]
             if label == prev_label:
-                prev_moment = convert_utc_to_local_time(prev_moment).timestamp() + window_shift # Convert to local time and add window shift as the previous moment is already labeled
-                moment = convert_utc_to_local_time(moment).timestamp() + window_shift # Convert to local time and add window shift as the current moment should have the same label
-                j = prev_moment
-                while j < moment:
+                prev_moment = convert_utc_to_local_time(prev_moment).timestamp() # Convert to local time and add window shift as the previous moment is already labeled
+                moment = convert_utc_to_local_time(moment).timestamp() # Convert to local time and add window shift as the current moment should have the same label
+                j = prev_moment if i == 1 else prev_moment + window_shift
+                while j <= moment:
                     state_labels.append((j, label))
                     j += window_shift
             else: 
                 # If the current moment is not the same as the previous moment, then there is a gap between the two moments by at least 10 seconds
                 # We need to label the gap as the previous label
-                prev_moment = convert_utc_to_local_time(prev_moment).timestamp() + window_shift
-                j = prev_moment - WINDOW_LAG
+                prev_moment = convert_utc_to_local_time(prev_moment).timestamp()
+                j = prev_moment if i == 1 else prev_moment + window_shift
                 while j < prev_moment + WINDOW_LAG:
                     state_labels.append((j, prev_label))
                     j += window_shift
                 # And the other 10 seconds as the current label
-                moment = convert_utc_to_local_time(moment).timestamp() + window_shift
+                moment = convert_utc_to_local_time(moment).timestamp()
                 j = moment - WINDOW_LAG
-                while j < moment + WINDOW_LAG:
+                while j <= moment:
                     state_labels.append((j, label))
                     j += window_shift
-        
+
         return state_labels
 
     
@@ -73,16 +74,26 @@ class GenerateStressStateFromMoments:
         metadata = pd.read_csv(metadata_path)
         features = np.load(feature_stats_path)
 
+
+        for i in range(1, len(state_labels)):
+            if (state_labels[i][0] == state_labels[i-1][0]):
+                print(state_labels[i], state_labels[i-1])
+
         state_datetime = pd.DataFrame([item[0] for item in state_labels], columns=['date_time'])
         metadata_datetime = metadata['date_time'].to_list()
         # Find the intersection of the state labels and the metadata
-        intersection_indices = state_datetime[state_datetime['date_time'].isin(metadata_datetime)].index.tolist()
-        
-        stress_state_moments = np.array(state_labels)[intersection_indices][:, 0]
-        stress_state_features = features[metadata[metadata['date_time'].isin(stress_state_moments)].index.tolist()]
+        feature_indices = metadata[metadata['date_time'].isin(state_datetime['date_time'])].index.tolist()
+
+        feature_moments = metadata['date_time'].iloc[feature_indices].to_list()
+
+        label_indices = state_datetime[state_datetime['date_time'].isin(feature_moments)].index.tolist()
+
+        stress_state_features = features[feature_indices]
+
+        stress_state_labels = np.array(state_labels)[label_indices][:, 1] # Get the labels only
 
 
-        stress_state_labels = np.array(state_labels)[intersection_indices][:, 1] # Get the labels only
+        assert(stress_state_features.shape[0] == stress_state_labels.shape[0])
 
         # Save the stress state labels
         feature_path = self.datapath_manager.get_feature_path_by_date(user_id, date)
@@ -150,5 +161,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     generate_stress_state = GenerateStressStateFromMoments(args.dataset_name)
-    generate_stress_state.generate_moments_by_metadata(args.user_id, args.date, args.window_shift)
     generate_stress_state.generate_stress_state_by_moments(args.user_id, args.date) 
+    generate_stress_state.generate_moments_by_metadata(args.user_id, args.date, args.window_shift)

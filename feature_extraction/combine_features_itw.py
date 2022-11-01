@@ -71,6 +71,7 @@ class ITWFeatureCombiner:
         mask = np.ones(combined_features.shape[0], dtype=bool)
         mask[removed_indices] = False
         combined_features = combined_features[mask, :]
+        
 
         output_file_path = os.path.join(user_combined_feature_path, 'bvp_eda_temp.npy')  
         np.save(output_file_path, combined_features)
