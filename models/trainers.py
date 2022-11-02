@@ -21,6 +21,7 @@ class BranchNeuralNetworkTrainer:
     def __init__(self, save_log_path: str, save_model_path: str, 
         config_dict,
         target_metrics: List[str] = ['accuracy', 'precision', 'recall', 'f1_score', 'auc'],
+        pretrained_model_path: str = None
     ):
         super(BranchNeuralNetworkTrainer, self).__init__()
 
@@ -31,9 +32,15 @@ class BranchNeuralNetworkTrainer:
         self.optimizer = torch.optim.Adam(params, lr = config_dict['learning_rate'], weight_decay = 1e-3)
         self.__std_scaler = StandardScaler()
         # Check if the model has training checkpoint
+        checkpoint_path = None
+        if pretrained_model_path is not None:
+            checkpoint_path = pretrained_model_path
         if os.path.exists(save_model_path):
+            checkpoint_path = save_model_path
+
+        if checkpoint_path is not None:
             print("LOAD PRETRAINED MODEL")
-            model_checkpoint = torch.load(save_model_path)
+            model_checkpoint = torch.load(checkpoint_path)
             self.model.load_state_dict(model_checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
             self.__std_scaler = model_checkpoint['std_scaler']
