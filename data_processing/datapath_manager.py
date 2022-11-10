@@ -1,6 +1,4 @@
 import configparser
-from importlib.metadata import metadata
-from tkinter import W
 from typing import Dict
 from dataclasses import dataclass
 from pathlib import Path
