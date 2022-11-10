@@ -35,7 +35,7 @@ class BranchNeuralNetworkTrainer:
         checkpoint_path = None
         if pretrained_model_path is not None:
             checkpoint_path = pretrained_model_path
-        if os.path.exists(save_model_path):
+        elif os.path.exists(save_model_path):
             checkpoint_path = save_model_path
 
         if checkpoint_path is not None:
@@ -183,6 +183,18 @@ class BranchNeuralNetworkTrainer:
                 predicts += combined_cls.round().squeeze().cpu().numpy().tolist()
         return predicts
 
+
+    def predict_proba(self, dataloader: EmbeddingDataLoader):
+        predicts = []
+        self.model.eval() # Set model to evaluation mode
+        with torch.no_grad():
+            _dataloader = dataloader.make_dataloader(batch_size = self.config_dict['batch_size'], is_train = False)
+            for i, (feats, _) in enumerate(_dataloader):
+                combined_logits, _ = self.__infer(feats)
+                sigmoid_function = nn.Sigmoid()
+                combined_cls = sigmoid_function(combined_logits)
+                predicts += combined_cls.squeeze().cpu().numpy().tolist()
+        return predicts
 
     def predict_and_evaluate(self, dataloader: EmbeddingDataLoader):
         y = dataloader.dataset.ground_truth
