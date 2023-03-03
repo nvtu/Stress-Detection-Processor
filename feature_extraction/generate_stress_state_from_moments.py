@@ -34,32 +34,50 @@ class GenerateStressStateFromMoments:
         chrono_moments = sorted(list(zip(moments, labels)), key=lambda x: x[0]) # Assume that the name of the moments is in chronological order
         num_moments = len(chrono_moments)
         
-        WINDOW_LAG = 5 # Lagging in 10 seconds for uncontinuous stress & non-stress moments
+        WINDOW_LAG = 5 # Lagging in 5 seconds for uncontinuous stress & non-stress moments
         state_labels = []
-        for i in range(1, num_moments):
+
+        latest_moment = 0
+        for i in range(num_moments):
             moment, label = chrono_moments[i]
-            prev_moment, prev_label = chrono_moments[i-1]
-            if label == prev_label:
-                prev_moment = convert_utc_to_local_time(prev_moment).timestamp() # Convert to local time and add window shift as the previous moment is already labeled
-                moment = convert_utc_to_local_time(moment).timestamp() # Convert to local time and add window shift as the current moment should have the same label
-                j = prev_moment if i == 1 else prev_moment + window_shift
-                while j <= moment:
-                    state_labels.append((j, label))
-                    j += window_shift
-            else: 
-                # If the current moment is not the same as the previous moment, then there is a gap between the two moments by at least 10 seconds
-                # We need to label the gap as the previous label
-                prev_moment = convert_utc_to_local_time(prev_moment).timestamp()
-                j = prev_moment if i == 1 else prev_moment + window_shift
-                while j < prev_moment + WINDOW_LAG:
-                    state_labels.append((j, prev_label))
-                    j += window_shift
-                # And the other 10 seconds as the current label
-                moment = convert_utc_to_local_time(moment).timestamp()
-                j = moment - WINDOW_LAG
-                while j <= moment:
-                    state_labels.append((j, label))
-                    j += window_shift
+            moment = convert_utc_to_local_time(moment).timestamp()
+            prev_moment = moment - WINDOW_LAG
+            next_moment = moment + WINDOW_LAG
+            j = prev_moment
+            extended_states = []
+            while j < next_moment:
+                if j >= latest_moment: # If the moment is not yet processed
+                    extended_states.append((j, label))
+                j += window_shift
+            latest_moment = max(latest_moment, j) # Update the latest moment
+            state_labels += extended_states
+        
+
+        
+        # for i in range(1, num_moments):
+        #     moment, label = chrono_moments[i]
+        #     prev_moment, prev_label = chrono_moments[i-1]
+        #     if label == prev_label:
+        #         prev_moment = convert_utc_to_local_time(prev_moment).timestamp() # Convert to local time and add window shift as the previous moment is already labeled
+        #         moment = convert_utc_to_local_time(moment).timestamp() # Convert to local time and add window shift as the current moment should have the same label
+        #         j = prev_moment if i == 1 else prev_moment + window_shift
+        #         while j <= moment:
+        #             state_labels.append((j, label))
+        #             j += window_shift
+        #     else: 
+        #         # If the current moment is not the same as the previous moment, then there is a gap between the two moments by at least 10 seconds
+        #         # We need to label the gap as the previous label
+        #         prev_moment = convert_utc_to_local_time(prev_moment).timestamp()
+        #         j = prev_moment if i == 1 else prev_moment + window_shift
+        #         while j < prev_moment + WINDOW_LAG:
+        #             state_labels.append((j, prev_label))
+        #             j += window_shift
+        #         # And the other 10 seconds as the current label
+        #         moment = convert_utc_to_local_time(moment).timestamp()
+        #         j = moment - WINDOW_LAG
+        #         while j <= moment:
+        #             state_labels.append((j, label))
+        #             j += window_shift
 
         return state_labels
 
@@ -74,25 +92,27 @@ class GenerateStressStateFromMoments:
         metadata = pd.read_csv(metadata_path)
         features = np.load(feature_stats_path)
 
-
-        for i in range(1, len(state_labels)):
-            if (state_labels[i][0] == state_labels[i-1][0]):
-                print(state_labels[i], state_labels[i-1])
-
         state_datetime = pd.DataFrame([item[0] for item in state_labels], columns=['date_time'])
-        metadata_datetime = metadata['date_time'].to_list()
+        # metadata_datetime = metadata['date_time'].to_list()
+        # print(metadata_datetime)
         # Find the intersection of the state labels and the metadata
         feature_indices = metadata[metadata['date_time'].isin(state_datetime['date_time'])].index.tolist()
 
         feature_moments = metadata['date_time'].iloc[feature_indices].to_list()
 
+        # a = sorted(state_datetime[state_datetime['date_time'].isin(feature_moments)]['date_time'].tolist())
+        # b = [i for i in range(len(a)) if a[i] == a[i-1]]
+        # print(a[8], a[7])
+        # print(b)
+        # print(len(a))
+        # print(len(list(set(a))))
+        # print(len(feature_moments))
         label_indices = state_datetime[state_datetime['date_time'].isin(feature_moments)].index.tolist()
 
         stress_state_features = features[feature_indices]
 
         stress_state_labels = np.array(state_labels)[label_indices][:, 1] # Get the labels only
-
-
+        
         assert(stress_state_features.shape[0] == stress_state_labels.shape[0])
 
         # Save the stress state labels
@@ -124,20 +144,23 @@ class GenerateStressStateFromMoments:
         features = np.load(features_stats_path)
 
         moments = [*stress_moments, *relaxed_moments]
-        timestamp_moments = [convert_utc_to_local_time(moment).timestamp() for moment in moments]
+        # timestamp_moments = [convert_utc_to_local_time(moment).timestamp() for moment in moments]
         labels = [*[1 for _ in range(len(stress_moments))], *[0 for _ in range(len(relaxed_moments))]] # Stress = 1, Relaxed = 0
 
         metadata = pd.read_csv(metadata_path)
         metadata_datetime = metadata['date_time'].to_list()
 
         chrono_moments = sorted(list(zip(moments, labels)), key=lambda x: x[0]) # Assume that the name of the moments is in chronological order
-
+        timestamp_moments = [convert_utc_to_local_time(x[0]).timestamp() for x in chrono_moments]
+        print(chrono_moments)
         # Find the intersection of the state labels and the metadata
         intersection_indices = metadata[metadata['date_time'].isin(timestamp_moments)].index.tolist()
+        # print(metadata.iloc[intersection_indices]['date_time'].tolist())
         filtered_features = features[intersection_indices]
 
         chrono_intersection_indices = [i for i in range(len(timestamp_moments)) if timestamp_moments[i] in metadata_datetime]
         filtered_moments = np.array(chrono_moments)[chrono_intersection_indices]
+        # print(filtered_moments)
 
         datetime_info = np.array(filtered_moments[:, 0])
         labels = np.array(filtered_moments[:, 1]).astype(int)
